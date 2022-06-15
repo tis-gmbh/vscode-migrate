@@ -1,6 +1,6 @@
 # VSCode Migrate
 
-A VSCode extension to migrate source code step by step. This extension is intended for projects that want to benefit from tools like [ts-morph](https://github.com/dsherret/ts-morph) or other code manipulation tools that go beyond pattern matching. Find an example of use at <https://github.com/tis-gmbh/vscode-migrate-example>.
+A VSCode extension to migrate source code step by step. This extension is intended for projects that want to benefit from tools like [ts-morph](https://github.com/dsherret/ts-morph) or other code manipulation tools that go beyond pattern matching, but lack the coverage to rely on automated tests to verify the correctness of the changes. Find an example of use at <https://github.com/tis-gmbh/vscode-migrate-example>.
 
 ## Features
 
