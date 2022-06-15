@@ -4,6 +4,10 @@
      "description": "Migrate files semi-autonomously.",
      "version": "0.0.1",
      "publisher": "tis",
+     "repository": {
+          "url": "https://github.com/tis-gmbh/vscode-migrate",
+          "type": "git"
+     },
      "engines": {
           "vscode": "^1.67.0"
      },
