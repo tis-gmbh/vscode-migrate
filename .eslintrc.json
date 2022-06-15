@@ -1,0 +1,59 @@
+{
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "ecmaVersion": 6,
+        "sourceType": "module",
+        "project": "tsconfig.json"
+    },
+    "plugins": [
+        "@typescript-eslint"
+    ],
+    "rules": {
+        "@typescript-eslint/explicit-function-return-type": "error",
+        "@typescript-eslint/explicit-member-accessibility": "warn",
+        "@typescript-eslint/no-floating-promises": "error",
+        "@typescript-eslint/naming-convention": [
+            "warn",
+            {
+                "selector": [
+                    "classProperty",
+                    "objectLiteralProperty",
+                    "typeProperty",
+                    "classMethod",
+                    "objectLiteralMethod",
+                    "typeMethod",
+                    "accessor",
+                    "enumMember"
+                ],
+                "format": null,
+                "modifiers": [
+                    "requiresQuotes"
+                ]
+            }
+        ],
+        "@typescript-eslint/prefer-readonly": "warn",
+        "@typescript-eslint/semi": "error",
+        "curly": [
+            "warn",
+            "multi-line"
+        ],
+        "eqeqeq": "warn",
+        "no-throw-literal": "warn",
+        "prefer-const": "warn",
+        "semi": "error",
+        "quotes": [
+            "warn",
+            "double",
+            {
+                "allowTemplateLiterals": true
+            }
+        ]
+    },
+    "ignorePatterns": [
+        "out",
+        "dist",
+        "**/*.d.ts",
+        "src/test/fixtures/**"
+    ]
+}
