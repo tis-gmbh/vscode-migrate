@@ -1,7 +1,7 @@
 import { inject, injectable } from "inversify";
 import { EventEmitter, OutputChannel } from "vscode";
 import { TYPES, VscWindow, VSC_TYPES } from "../di/types";
-import { IMigration, MatchedFile } from "../migrationTypes";
+import { CommitInfo, IMigration, MatchedFile } from "../migrationTypes";
 import { MigrationLoader } from "./migrationLoader";
 
 @injectable()
@@ -51,6 +51,15 @@ export class MigrationHolder {
         } catch (error: any) {
             this.handleMigrationError(error);
             return [];
+        }
+    }
+
+    public async getCommitMessage(commitInfo: CommitInfo): Promise<string | undefined> {
+        try {
+            return await this.migration?.getCommitMessage?.(commitInfo);
+        } catch (error: any) {
+            this.handleMigrationError(error);
+            return undefined;
         }
     }
 

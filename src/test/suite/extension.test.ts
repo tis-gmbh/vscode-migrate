@@ -62,9 +62,9 @@ suite("VSCode Migrate", () => {
 
         expect(actualNewContent).to.equal(expectedNewContent);
         expect(scenario.stagedPaths).to.deep.contain([toFileUri(firstMatch).fsPath]);
-        expect(scenario.commitMessages).to.contain(
-            `Migration: 'Brackets', File: 'main.ts', Match: '>>>First match<<<'`
-        );
+        expect(scenario.commitMessages).to.deep.equal([
+            `(Auto) Migration 'Brackets' for 'src/main.ts' labeled '>>>First match<<<'`
+        ]);
     });
 
     test("updates matches when change was applied", async () => {
@@ -165,5 +165,16 @@ suite("VSCode Migrate", () => {
         const actualContent = await scenario.getChangedContentFor(invalidMatchUri);
 
         expect(actualContent).to.equal(unchangedContent);
+    });
+
+    test("commits with custom commit message", async () => {
+        const scenario = await Scenario.load("singleFile", "Brackets - Custom Commit Message");
+        const firstMatch = scenario.getFirstMatch();
+
+        await scenario.applyChangesFor(firstMatch);
+
+        expect(scenario.commitMessages).to.deep.equal([
+            `Migration 'Brackets - Custom Commit Message' for 'src/main.ts' labeled '>>>First match<<<' but the commit message is custom`
+        ]);
     });
 });
