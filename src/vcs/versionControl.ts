@@ -27,7 +27,8 @@ export class VersionControl {
     private async stage(matchUri: Uri): Promise<void> {
         const fileUri = toFileUri(matchUri);
         const repo = this.getRepoOrThrow(fileUri);
-        await repo.add([fileUri.fsPath]);
+        const changes = await repo.diffWithHEAD();
+        await repo.add(changes.map(change => change.uri.fsPath));
     }
 
     private getRepoOrThrow(fileUri: Uri): Repository {

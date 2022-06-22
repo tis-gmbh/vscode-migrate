@@ -10,8 +10,8 @@ import { TYPES } from "../../di/types";
 import { MatchManager } from "../../migration/matchManger";
 import { MigrationHolder } from "../../migration/migrationHolder";
 import { MigrationLoader } from "../../migration/migrationLoader";
-import { fsPathToFileUri, stringify } from "../../utils/uri";
-import { API, Repository } from "../../vcs/git";
+import { fsPathToFileUri, stringify, toFileUri } from "../../utils/uri";
+import { API, Change, Repository, Status } from "../../vcs/git";
 import { GitExtension } from "../../vcs/gitExtension";
 import { VSCodeMigrate } from "../../vscodeMigrate";
 
@@ -63,6 +63,7 @@ export class Scenario {
     }> = [];
     public readonly stagedPaths: string[][] = [];
     public readonly commitMessages: string[] = [];
+    private readonly diffWithHead: Change[] = [];
 
     private constructor(public name: string) {
         emptyDirSync(testWorkspacePath);
@@ -151,11 +152,32 @@ export class Scenario {
                             },
                             commit: (message: string) => {
                                 scenario.commitMessages.push(message);
+                            },
+                            diffWithHEAD: () => {
+                                return Promise.resolve(scenario.diffWithHead);
                             }
                         } as Partial<Repository> as Repository;
                     }
                 } as Partial<API> as API);
             }
+        });
+    }
+
+    public setModified(fileUri: Uri): void {
+        this.diffWithHead.push({
+            originalUri: fileUri,
+            renameUri: fileUri,
+            uri: fileUri,
+            status: Status.MODIFIED
+        });
+    }
+
+    public setUntracked(fileUri: Uri): void {
+        this.diffWithHead.push({
+            originalUri: fileUri,
+            renameUri: fileUri,
+            uri: fileUri,
+            status: Status.UNTRACKED
         });
     }
 
@@ -220,6 +242,7 @@ export class Scenario {
 
     public async applyChangesFor(matchUri: Uri): Promise<void> {
         const applyChangeCommand = this.getCommand<ApplyChangeCommand>("vscode-migrate.apply-change");
+        this.setModified(toFileUri(matchUri));
         await applyChangeCommand?.execute(matchUri);
     }
 

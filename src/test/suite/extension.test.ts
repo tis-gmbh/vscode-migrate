@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { stringify, toFileUri, toMatchUri } from "../../utils/uri";
+import { fileUriToFsPath, stringify, toFileUri, toMatchUri } from "../../utils/uri";
 import { createCoverageScheme, Scenario } from "./scenario";
 
 suite("VSCode Migrate", () => {
@@ -176,5 +176,19 @@ suite("VSCode Migrate", () => {
         expect(scenario.commitMessages).to.deep.equal([
             `Migration 'Brackets - Custom Commit Message' for 'src/main.ts' labeled '>>>First match<<<' but the commit message is custom`
         ]);
+    });
+
+    test("commits all modified and untracked files", async () => {
+        const scenario = await Scenario.load("twoFile", "Brackets");
+        const firstMatch = scenario.getFirstMatch();
+
+        scenario.setModified(scenario.actualUri("src/secondFile.ts"));
+        scenario.setUntracked(scenario.actualUri("src/newlyAddedFile.ts"));
+
+        await scenario.applyChangesFor(firstMatch);
+
+        expect(scenario.stagedPaths[0]).to.contain(fileUriToFsPath(toFileUri(firstMatch)));
+        expect(scenario.stagedPaths[0]).to.contain(scenario.actualPath("src/secondFile.ts"));
+        expect(scenario.stagedPaths[0]).to.contain(scenario.actualPath("src/newlyAddedFile.ts"));
     });
 });
