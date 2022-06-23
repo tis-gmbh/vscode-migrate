@@ -2,7 +2,7 @@
      "name": "vscode-migrate",
      "displayName": "VSCode Migrate",
      "description": "Migrate files semi-autonomously.",
-     "version": "0.0.1",
+     "version": "1.0.0",
      "publisher": "TIStechnischeInformationssystemeGmbH",
      "icon": "logo.png",
      "repository": {
