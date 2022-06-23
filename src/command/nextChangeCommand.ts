@@ -1,4 +1,5 @@
 import { inject, injectable } from "inversify";
+import { basename } from "path";
 import { FileSystemProvider, Uri } from "vscode";
 import { TYPES, VscCommands, VscWindow, VscWorkspace, VSC_TYPES } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
@@ -59,6 +60,8 @@ export class NextChangeCommand implements Command {
 
     private showChange(matchUri: Uri): Thenable<void> {
         const fileUri = toFileUri(matchUri);
-        return this.commands.executeCommand("vscode.diff", fileUri, matchUri);
+        const match = this.matchManager.byMatchUriOrThrow(matchUri);
+        const title = basename(fileUri.fsPath) + ": " + match.match.label;
+        return this.commands.executeCommand("vscode.diff", fileUri, matchUri, title);
     };
 }
