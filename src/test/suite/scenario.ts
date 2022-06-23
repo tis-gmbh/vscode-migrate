@@ -63,7 +63,7 @@ export class Scenario {
     }> = [];
     public readonly stagedPaths: string[][] = [];
     public readonly commitMessages: string[] = [];
-    private readonly diffWithHead: Change[] = [];
+    private readonly workingTreeChanges: Change[] = [];
 
     private constructor(public name: string) {
         emptyDirSync(testWorkspacePath);
@@ -153,8 +153,8 @@ export class Scenario {
                             commit: (message: string) => {
                                 scenario.commitMessages.push(message);
                             },
-                            diffWithHEAD: () => {
-                                return Promise.resolve(scenario.diffWithHead);
+                            state: {
+                                workingTreeChanges: scenario.workingTreeChanges
                             }
                         } as Partial<Repository> as Repository;
                     }
@@ -164,7 +164,7 @@ export class Scenario {
     }
 
     public setModified(fileUri: Uri): void {
-        this.diffWithHead.push({
+        this.workingTreeChanges.push({
             originalUri: fileUri,
             renameUri: fileUri,
             uri: fileUri,
@@ -173,7 +173,7 @@ export class Scenario {
     }
 
     public setUntracked(fileUri: Uri): void {
-        this.diffWithHead.push({
+        this.workingTreeChanges.push({
             originalUri: fileUri,
             renameUri: fileUri,
             uri: fileUri,
