@@ -3,7 +3,7 @@
      "displayName": "VSCode Migrate",
      "description": "Migrate files semi-autonomously.",
      "version": "0.0.1",
-     "publisher": "tis",
+     "publisher": "TIStechnischeInformationssystemeGmbH",
      "repository": {
           "url": "https://github.com/tis-gmbh/vscode-migrate",
           "type": "git"
