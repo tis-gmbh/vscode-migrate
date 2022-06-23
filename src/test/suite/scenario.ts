@@ -64,6 +64,8 @@ export class Scenario {
     public readonly stagedPaths: string[][] = [];
     public readonly commitMessages: string[] = [];
     private readonly workingTreeChanges: Change[] = [];
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly
+    private workingTreeScanned = false;
 
     private constructor(public name: string) {
         emptyDirSync(testWorkspacePath);
@@ -154,7 +156,13 @@ export class Scenario {
                                 scenario.commitMessages.push(message);
                             },
                             state: {
-                                workingTreeChanges: scenario.workingTreeChanges
+                                get workingTreeChanges() {
+                                    return scenario.workingTreeScanned ? scenario.workingTreeChanges : [];
+                                }
+                            },
+                            status: () => {
+                                scenario.workingTreeScanned = true;
+                                return Promise.resolve();
                             }
                         } as Partial<Repository> as Repository;
                     }
