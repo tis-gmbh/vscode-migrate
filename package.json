@@ -4,6 +4,7 @@
      "description": "Migrate files semi-autonomously.",
      "version": "0.0.1",
      "publisher": "TIStechnischeInformationssystemeGmbH",
+     "icon": "logo.png",
      "repository": {
           "url": "https://github.com/tis-gmbh/vscode-migrate",
           "type": "git"
