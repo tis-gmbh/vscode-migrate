@@ -1,9 +1,9 @@
 import { inject, injectable } from "inversify";
-import { FileSystemProvider, ProgressLocation, Uri } from "vscode";
+import { FileSystemProvider, Progress, ProgressLocation, Uri } from "vscode";
 import { TYPES, VscCommands, VscWindow, VscWorkspace, VSC_TYPES } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolder } from "../migration/migrationHolder";
-import { toFileUri } from "../utils/uri";
+import { stringify, toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
 import { Command } from "./command";
 import { NextChangeCommand } from "./nextChangeCommand";
@@ -11,6 +11,8 @@ import { NextChangeCommand } from "./nextChangeCommand";
 @injectable()
 export class ApplyChangeCommand extends NextChangeCommand implements Command {
     public readonly id = "vscode-migrate.apply-change";
+    private lastExecution?: Thenable<void>;
+    private queue: string[] = [];
 
     public constructor(
         @inject(TYPES.ChangedContentProvider) protected readonly changedContentProvider: FileSystemProvider,
@@ -31,32 +33,71 @@ export class ApplyChangeCommand extends NextChangeCommand implements Command {
     }
 
     public async execute(matchUri: Uri): Promise<void> {
-        await super.execute(matchUri);
+        const stringifiedUri = stringify(matchUri);
+        if (this.queue.includes(stringifiedUri)) {
+            void this.window.showInformationMessage(`Match is already queued.`);
+            return;
+        }
+
+        this.queue.push(stringifiedUri);
         try {
-            await this.applyChangesFor(matchUri);
-        } catch (error: any) {
-            this.handleApplyError(error);
+            await super.execute(matchUri);
+            await this.applyChangesWithProgress(matchUri);
+        } finally {
+            const index = this.queue.indexOf(stringifiedUri);
+            if (index > -1) {
+                this.queue.splice(index, 1);
+            }
         }
     }
 
-    private async applyChangesFor(matchUri: Uri): Promise<void> {
-        const fileUri = toFileUri(matchUri);
+    private applyChangesWithProgress(matchUri: Uri): Thenable<void> {
+        const match = this.matchManager.byMatchUriOrThrow(matchUri);
+        const previousExecution = this.lastExecution;
 
-        await this.window.withProgress({
-            title: "Applying Change",
+        const applyChanges = async (progress: Progress<{ message: string }>): Promise<void> => {
+            if (previousExecution) {
+                progress.report({ message: "Waiting for previous execution" });
+                await this.waitForPreviousExecution(previousExecution, matchUri);
+            }
+
+            try {
+                await this.applyChangesForMatch(matchUri, progress);
+            } catch (error) {
+                this.handleApplyError(error);
+                this.lastExecution = undefined;
+                throw error;
+            }
+        };
+
+        return this.window.withProgress({
+            title: `Applying Change ${match.match.label}`,
             location: ProgressLocation.Notification
-        }, async (progress) => {
-            progress.report({ message: "Saving File" });
-            const newContent = await this.changedContentProvider.readFile(matchUri);
-            await this.workspace.fs.writeFile(fileUri, newContent);
-            this.matchManager.resolveEntry(matchUri);
+        }, progress => this.lastExecution = applyChanges(progress));
+    }
 
-            progress.report({ message: "Running verification tasks" });
-            await this.migrationHolder.verify();
+    private async waitForPreviousExecution(previousExecution: Thenable<void>, matchUri: Uri): Promise<void> {
+        try {
+            await previousExecution;
+        } catch (error) {
+            const match = this.matchManager.byMatchUriOrThrow(matchUri);
+            void this.window.showErrorMessage(`Changes for match ${match.match.label} were not applied because the previous application failed.`);
+            throw error;
+        }
+    }
 
-            progress.report({ message: "Committing file" });
-            await this.versionControl.stageAndCommit(matchUri);
-        });
+    private async applyChangesForMatch(matchUri: Uri, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+        const fileUri = toFileUri(matchUri);
+        progress.report({ message: "Saving File" });
+        const newContent = await this.changedContentProvider.readFile(matchUri);
+        await this.workspace.fs.writeFile(fileUri, newContent);
+        this.matchManager.resolveEntry(matchUri);
+
+        progress.report({ message: "Running verification tasks" });
+        await this.migrationHolder.verify();
+
+        progress.report({ message: "Committing file" });
+        await this.versionControl.stageAndCommit(matchUri);
     }
 
     private handleApplyError(error: any): void {
