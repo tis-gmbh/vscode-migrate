@@ -89,6 +89,7 @@ export class ApplyChangeCommand extends NextChangeCommand implements Command {
     private async applyChangesForMatch(matchUri: Uri, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         const fileUri = toFileUri(matchUri);
         progress.report({ message: "Saving File" });
+        await this.saveEditor(matchUri);
         const newContent = await this.changedContentProvider.readFile(matchUri);
         await this.workspace.fs.writeFile(fileUri, newContent);
         this.matchManager.resolveEntry(matchUri);
@@ -98,6 +99,17 @@ export class ApplyChangeCommand extends NextChangeCommand implements Command {
 
         progress.report({ message: "Committing file" });
         await this.versionControl.stageAndCommit(matchUri);
+    }
+
+    private async saveEditor(matchUri: Uri): Promise<void> {
+        const stringifiedUri = stringify(matchUri);
+        const modifiedDocument = this.workspace.textDocuments.find(
+            candidate => stringify(candidate.uri) === stringifiedUri
+        );
+
+        if (modifiedDocument && modifiedDocument.isDirty) {
+            await modifiedDocument.save();
+        }
     }
 
     private handleApplyError(error: any): void {
