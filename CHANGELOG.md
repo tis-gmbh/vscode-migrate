@@ -1,9 +1,10 @@
 # Change Log
 
-All notable changes to the "vscode-migrate" extension will be documented in this file.
+## 1.0.4
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+- Save dirty preview before change is applied [#1](https://github.com/tis-gmbh/vscode-migrate/issues/1)
+- Close preview of applied change even when opened in 'keep' mode [#3](https://github.com/tis-gmbh/vscode-migrate/issues/3)
 
-## [Unreleased]
+## 1.0.1 - 1.0.3
 
-- Initial release
+- minor improvements
