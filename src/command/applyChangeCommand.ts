@@ -41,6 +41,7 @@ export class ApplyChangeCommand extends NextChangeCommand implements Command {
 
         this.queue.push(stringifiedUri);
         try {
+            await this.saveEditor(matchUri);
             await super.execute(matchUri);
             await this.applyChangesWithProgress(matchUri);
         } finally {
@@ -89,7 +90,6 @@ export class ApplyChangeCommand extends NextChangeCommand implements Command {
     private async applyChangesForMatch(matchUri: Uri, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         const fileUri = toFileUri(matchUri);
         progress.report({ message: "Saving File" });
-        await this.saveEditor(matchUri);
         const newContent = await this.changedContentProvider.readFile(matchUri);
         await this.workspace.fs.writeFile(fileUri, newContent);
         this.matchManager.resolveEntry(matchUri);

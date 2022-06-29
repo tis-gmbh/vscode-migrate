@@ -19,7 +19,15 @@ export class NextChangeCommand implements Command {
     ) { }
 
     public async execute(matchUri: Uri): Promise<void> {
+        await this.closeCurrent(matchUri);
         await this.openNextAfter(matchUri);
+    }
+
+    private async closeCurrent(matchUri: Uri): Promise<void> {
+        const active = this.window.activeTextEditor;
+        if (active && stringify(active.document.uri) === stringify(matchUri)) {
+            await this.commands.executeCommand("workbench.action.closeActiveEditor");
+        }
     }
 
     private async openNextAfter(matchUri: Uri): Promise<void> {
