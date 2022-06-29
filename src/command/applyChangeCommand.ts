@@ -12,7 +12,7 @@ import { NextChangeCommand } from "./nextChangeCommand";
 export class ApplyChangeCommand extends NextChangeCommand implements Command {
     public readonly id = "vscode-migrate.apply-change";
     private lastExecution?: Thenable<void>;
-    private queue: string[] = [];
+    private readonly queue: string[] = [];
 
     public constructor(
         @inject(TYPES.ChangedContentProvider) protected readonly changedContentProvider: FileSystemProvider,
