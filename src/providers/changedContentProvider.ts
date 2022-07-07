@@ -85,11 +85,11 @@ export class ChangedContentProvider implements FileSystemProvider {
             const originalContent = openedMatch.originalContent.toString();
 
             const eng = new StringEngine();
-            const orig_to_ver1 = eng.getEditsByCharacter(originalContent, currentContent);
-            const orig_to_ver2 = eng.getEditsByCharacter(originalContent, modifiedContent);
+            const originalToCurrent = eng.getEditsByCharacter(originalContent, currentContent);
+            const originalToModified = eng.getEditsByCharacter(originalContent, modifiedContent);
 
             const merge = new Merge<string>();
-            const result = merge.merge3(orig_to_ver2, orig_to_ver1);
+            const result = merge.merge3(originalToModified, originalToCurrent);
             const mergeResult = result.join("");
 
             return Buffer.from(mergeResult);
