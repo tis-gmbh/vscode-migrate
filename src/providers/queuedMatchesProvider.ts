@@ -22,6 +22,7 @@ export class QueuedMatchesProvider implements TreeDataProvider<string> {
         if (isMatchUri(uri)) {
             const match = this.matchManager.byMatchUriOrThrow(parsedUri);
             const item: TreeItem = {
+                id: uri,
                 label: `${match.match.label}`
             };
             const originalUri = toFileUri(parsedUri);
@@ -35,6 +36,7 @@ export class QueuedMatchesProvider implements TreeDataProvider<string> {
         }
 
         return {
+            id: uri,
             label: basename(uri),
             collapsibleState: TreeItemCollapsibleState.Expanded,
             iconPath: ThemeIcon.File,
