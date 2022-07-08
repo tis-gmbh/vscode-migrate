@@ -1,8 +1,9 @@
 import { inject, injectable } from "inversify";
-import { EventEmitter, OutputChannel } from "vscode";
+import { EventEmitter } from "vscode";
 import { TYPES, VscWindow, VSC_TYPES } from "../di/types";
 import { CommitInfo, IMigration, MatchedFile } from "../migrationTypes";
 import { MigrationLoader } from "./migrationLoader";
+import { MigrationOutputChannel } from "./migrationOutputChannel";
 
 @injectable()
 export class MigrationHolder {
@@ -11,13 +12,11 @@ export class MigrationHolder {
     private migrationName?: string;
     private migration?: IMigration;
 
-    private readonly outputChannel: OutputChannel;
-
     public constructor(
         @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow,
         @inject(TYPES.MigrationLoader) private readonly migrationLoader: MigrationLoader,
+        @inject(TYPES.MigrationOutputChannel) private readonly outputChannel: MigrationOutputChannel
     ) {
-        this.outputChannel = this.window.createOutputChannel("Migration");
     }
 
     public async start(migrationName: string): Promise<void> {
@@ -69,7 +68,12 @@ export class MigrationHolder {
     }
 
     private handleMigrationError(error: any): void {
-        void this.window.showErrorMessage(`Migration threw an error. Check the output for details.`);
-        this.outputChannel.append(error.stack);
+        this.outputChannel.append("Migration threw an error: " + error.stack);
+        void this.window.showErrorMessage(`Migration threw an error. Check the output for details.`, "Show Output")
+            .then(result => {
+                if (result === "Show Output") {
+                    this.outputChannel.show();
+                }
+            });
     }
 }

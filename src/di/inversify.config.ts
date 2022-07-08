@@ -7,6 +7,7 @@ import { StartMigrationCommand } from "../command/startMigrationCommand";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolder } from "../migration/migrationHolder";
 import { MigrationLoader } from "../migration/migrationLoader";
+import { MigrationOutputChannel } from "../migration/migrationOutputChannel";
 import { ChangedContentProvider } from "../providers/changedContentProvider";
 import { CoverageDecorationProvider } from "../providers/coverageDecorationProvider";
 import { QueuedMatchesProvider } from "../providers/queuedMatchesProvider";
@@ -28,6 +29,7 @@ export const modules = new ContainerModule(bind => {
     bind(TYPES.GitExtension).to(GitExtension).inSingletonScope();
     bind(TYPES.CoverageDecorationProvider).to(CoverageDecorationProvider).inSingletonScope();
     bind(TYPES.TextDecorationConsumer).to(TextDecorationConsumer).inSingletonScope();
+    bind(TYPES.MigrationOutputChannel).to(MigrationOutputChannel).inSingletonScope();
 });
 
 export const vscCommands = new ContainerModule(bind => {

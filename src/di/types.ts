@@ -12,7 +12,8 @@ export const TYPES = {
     VersionControl: Symbol.for("VersionControl"),
     GitExtension: Symbol.for("GitExtension"),
     CoverageDecorationProvider: Symbol.for("CoverageDecorationProvider"),
-    TextDecorationConsumer: Symbol.for("CoverageDecorationConsumer")
+    TextDecorationConsumer: Symbol.for("CoverageDecorationConsumer"),
+    MigrationOutputChannel: Symbol.for("MigrationOutputChannel")
 };
 
 export const VSC_TYPES = {

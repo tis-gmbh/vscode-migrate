@@ -1,8 +1,9 @@
 import { inject, injectable } from "inversify";
 import { basename, extname, join } from "path";
-import { OutputChannel, Progress, ProgressLocation, RelativePattern, Uri } from "vscode";
-import { VscWindow, VscWorkspace, VSC_TYPES } from "../di/types";
+import { Progress, ProgressLocation, RelativePattern, Uri } from "vscode";
+import { TYPES, VscWindow, VscWorkspace, VSC_TYPES } from "../di/types";
 import { MigrationConstructor, MigrationFactory } from "../migrationTypes";
+import { MigrationOutputChannel } from "./migrationOutputChannel";
 
 const migrations: Record<string, MigrationFactory> = {};
 
@@ -20,14 +21,12 @@ global.Migration = (options: { name: string, factory?: MigrationFactory }): (tar
 @injectable()
 export class MigrationLoader {
     private progress?: Progress<{ message: string }>;
-    private readonly outputChannel: OutputChannel;
 
     public constructor(
         @inject(VSC_TYPES.VscWorkspace) private readonly workspace: VscWorkspace,
-        @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow
-    ) {
-        this.outputChannel = this.window.createOutputChannel("Migration Loader");
-    }
+        @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow,
+        @inject(TYPES.MigrationOutputChannel) private readonly outputChannel: MigrationOutputChannel
+    ) { }
 
     public refresh(): Thenable<void> {
         return this.window.withProgress({
@@ -122,8 +121,13 @@ export class MigrationLoader {
     }
 
     private handleMigrationLoadError(file: Uri, error: any): void {
-        void this.window.showErrorMessage(`Failed to load ${basename(file.fsPath)}. Check the output for details.`);
-        this.outputChannel.append(error.stack);
+        this.outputChannel.append(`Failed to load file ${basename(file.fsPath)}: ${error.stack}`);
+        void this.window.showErrorMessage(`Failed to load ${basename(file.fsPath)}. Check the output for details.`, "Show Output")
+            .then(result => {
+                if (result === "Show Output") {
+                    this.outputChannel.show();
+                }
+            });
     }
 
     public getNames(): string[] {
