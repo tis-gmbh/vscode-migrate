@@ -46,6 +46,9 @@
                "linux": {
                     "command": "mkdir -p src/test/fixtures/_testWorkspace"
                },
+               "osx": {
+                    "command": "mkdir -p src/test/fixtures/_testWorkspace"
+               },
                "windows": {
                     "command": "mkdir -f src/test/fixtures/_testWorkspace"
                },
