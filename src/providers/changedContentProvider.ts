@@ -17,7 +17,7 @@ export class ChangedContentProvider implements FileSystemProvider {
         @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow,
         @inject(VSC_TYPES.VscWorkspace) private readonly workspace: VscWorkspace,
         @inject(TYPES.MatchManager) private readonly matchManager: MatchManager,
-        @inject(TYPES.MigrationHolder) private readonly migrationHolder: MigrationHolder
+        @inject(TYPES.MigrationHolderRemote) private readonly migrationHolder: MigrationHolder
     ) { }
 
     public watch(uri: Uri, _options: { readonly recursive: boolean; readonly excludes: readonly string[] }): Disposable {

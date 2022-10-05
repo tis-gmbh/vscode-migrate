@@ -1,9 +1,6 @@
-import { inject, injectable } from "inversify";
-import { basename, extname, join } from "path";
-import { Progress, ProgressLocation, RelativePattern, Uri } from "vscode";
-import { TYPES, VscWindow, VscWorkspace, VSC_TYPES } from "../di/types";
+import { extname } from "path";
 import { MigrationConstructor, MigrationFactory } from "../migrationTypes";
-import { MigrationOutputChannel } from "./migrationOutputChannel";
+import glob = require("matched");
 
 const migrations: Record<string, MigrationFactory> = {};
 
@@ -17,72 +14,54 @@ global.Migration = (options: { name: string, factory?: MigrationFactory }): (tar
     };
 };
 
-
-@injectable()
 export class MigrationLoader {
-    private progress?: Progress<{ message: string }>;
+    private migrationScriptErrors: Record<string, any> = {};
 
-    public constructor(
-        @inject(VSC_TYPES.VscWorkspace) private readonly workspace: VscWorkspace,
-        @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow,
-        @inject(TYPES.MigrationOutputChannel) private readonly outputChannel: MigrationOutputChannel
-    ) { }
-
-    public refresh(): Thenable<void> {
-        return this.window.withProgress({
-            title: "Looking for migrations",
-            location: ProgressLocation.Notification,
-            cancellable: false
-        }, async (progress) => {
-            this.progress = progress;
-            this.updateProgress("Finding files...");
-            const pattern = new RelativePattern(this.migrationDir, "*[!.d].{js,ts}");
-            let files = await this.workspace.findFiles(pattern);
-            files = this.filterTsMigrations(files);
-            await this.fetchMigrationsFrom(files);
-        });
+    public async refresh(dir: string): Promise<Record<string, any>> {
+        let files = await glob(["*[!.d].{js,ts}"], { cwd: dir });
+        files = this.filterTsMigrations(dir, files);
+        await this.fetchMigrationsFrom(files);
+        return this.migrationScriptErrors;
     }
 
-    private async fetchMigrationsFrom(files: Uri[]): Promise<void> {
+    private async fetchMigrationsFrom(files: string[]): Promise<void> {
         for (const file of files) {
             await this.tryRequireAsync(file);
         }
     }
 
-    private updateProgress(message: string): void {
-        this.progress?.report({ message: message });
-    }
-
-    private get migrationDir(): string {
-        return join(this.workspace.workspaceFolders![0]!.uri.fsPath, ".vscode/migrations/");
-    }
-
-    private filterTsMigrations(files: Uri[]): Uri[] {
-        const tsMigrationsExist = files.some(isTsUri);
+    private filterTsMigrations(dir: string, files: string[]): string[] {
+        const tsMigrationsExist = files.some(isTsString);
         if (!tsMigrationsExist) return files;
-        if (!this.tryRegisterTsNode()) return files.filter(isNoTsUri);
+        if (!this.tryRegisterTsNode(dir)) {
+            return files.filter((uri) => {
+                if (isTsString(uri)) {
+                    this.migrationScriptErrors[uri] = new Error("Migration is written in TypeScript, but ts-node is not installed");
+                }
+                return true;
+            });
+        }
         return files;
     }
 
-    private tryRegisterTsNode(): boolean {
+    private tryRegisterTsNode(dir: string): boolean {
         try {
-            this.registerTsNode();
+            this.registerTsNode(dir);
             return true;
         } catch (error: any) {
             if (error.code === "MODULE_NOT_FOUND") {
-                void this.window.showWarningMessage("ts-node is not installed. Migration files written in typescript will be ignored.");
                 return false;
             }
             throw error;
         }
     }
 
-    private registerTsNode(): void {
+    private registerTsNode(dir: string): void {
         const path = this.require.resolve("ts-node", {
-            paths: [this.migrationDir]
+            paths: [dir]
         });
         this.require(path).register({
-            projectSearchDir: this.migrationDir,
+            projectSearchDir: dir,
             compilerOptions: {
                 target: "es2020",
                 module: "commonjs",
@@ -98,12 +77,11 @@ export class MigrationLoader {
         return __non_webpack_require__;
     }
 
-    private async tryRequireAsync(file: Uri): Promise<void> {
+    private async tryRequireAsync(file: string): Promise<void> {
         try {
-            this.updateProgress(`Loading ${basename(file.fsPath)}...`);
-            await this.requireAsync(file.fsPath);
+            await this.requireAsync(file);
         } catch (error) {
-            this.handleMigrationLoadError(file, error);
+            this.migrationScriptErrors[file] = error;
         }
     }
 
@@ -120,16 +98,6 @@ export class MigrationLoader {
         });
     }
 
-    private handleMigrationLoadError(file: Uri, error: any): void {
-        this.outputChannel.append(`Failed to load file ${basename(file.fsPath)}: ${error.stack}`);
-        void this.window.showErrorMessage(`Failed to load ${basename(file.fsPath)}. Check the output for details.`, "Show Output")
-            .then(result => {
-                if (result === "Show Output") {
-                    this.outputChannel.show();
-                }
-            });
-    }
-
     public getNames(): string[] {
         return Object.keys(migrations);
     }
@@ -140,8 +108,7 @@ export class MigrationLoader {
 }
 
 
-const isTsUri = (file: Uri): boolean => extname(file.fsPath) === ".ts";
-const isNoTsUri = (file: Uri): boolean => !isTsUri(file);
+const isTsString = (file: string): boolean => extname(file) === ".ts";
 
 type FactoryType<T> = () => T;
 type ConstructorType<T> = new () => T;

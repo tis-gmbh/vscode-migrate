@@ -13,7 +13,7 @@ export class VersionControl {
 
     public constructor(
         @inject(TYPES.MatchManager) private readonly matchManager: MatchManager,
-        @inject(TYPES.MigrationHolder) private readonly migrationHolder: MigrationHolder,
+        @inject(TYPES.MigrationHolderRemote) private readonly migrationHolder: MigrationHolder,
         @inject(TYPES.GitExtension) private readonly gitExtension: GitExtension,
         @inject(VSC_TYPES.VscWorkspace) private readonly workspace: VscWorkspace,
     ) { }

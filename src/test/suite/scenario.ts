@@ -8,8 +8,8 @@ import { Command } from "../../command/command";
 import { modules, vscCommands, vscModules } from "../../di/inversify.config";
 import { TYPES } from "../../di/types";
 import { MatchManager } from "../../migration/matchManger";
-import { MigrationHolder } from "../../migration/migrationHolder";
-import { MigrationLoader } from "../../migration/migrationLoader";
+import { MigrationHolderRemote } from "../../migration/migrationHolderRemote";
+import { MigrationLoaderRemote } from "../../migration/migrationLoaderRemote";
 import { fsPathToFileUri, stringify, toFileUri } from "../../utils/uri";
 import { API, Change, Repository, Status } from "../../vcs/git";
 import { GitExtension } from "../../vcs/gitExtension";
@@ -96,10 +96,10 @@ export class Scenario {
     }
 
     private async startMigration(migrationName: string): Promise<void> {
-        const migrationLoader = this.container.get<MigrationLoader>(TYPES.MigrationLoader);
-        const migrationHolder = this.container.get<MigrationHolder>(TYPES.MigrationHolder);
+        const migrationLoader = this.container.get<MigrationLoaderRemote>(TYPES.MigrationLoaderRemote);
+        const migrationHolder = this.container.get<MigrationHolderRemote>(TYPES.MigrationHolderRemote);
         await migrationLoader.refresh();
-        const migrations = migrationLoader.getNames();
+        const migrations = await migrationLoader.getNames();
         const defaultMigration = migrations.find(migration => migration === migrationName);
         if (!defaultMigration) throw new Error("Default migration not found");
 

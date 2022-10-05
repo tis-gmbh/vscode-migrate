@@ -25,7 +25,7 @@ export class MatchManager {
     private readyPromise = Promise.resolve();
 
     public constructor(
-        @inject(TYPES.MigrationHolder) private readonly migrationHolder: MigrationHolder,
+        @inject(TYPES.MigrationHolderRemote) private readonly migrationHolder: MigrationHolder,
         @inject(VSC_TYPES.VscWorkspace) private readonly workspace: VscWorkspace,
     ) {
         migrationHolder.migrationChanged(() => this.replaceMatches());

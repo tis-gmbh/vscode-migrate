@@ -21,7 +21,7 @@ export class ApplyChangeCommand extends NextChangeCommand implements Command {
         @inject(TYPES.MatchManager) protected readonly matchManager: MatchManager,
         @inject(VSC_TYPES.VscCommands) protected readonly commands: VscCommands,
         @inject(TYPES.VersionControl) protected readonly versionControl: VersionControl,
-        @inject(TYPES.MigrationHolder) protected readonly migrationHolder: MigrationHolder
+        @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolder
     ) {
         super(
             changedContentProvider,

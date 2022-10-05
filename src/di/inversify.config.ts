@@ -5,9 +5,10 @@ import { ApplyChangeCommand } from "../command/applyChangeCommand";
 import { CommandManager } from "../command/commandManager";
 import { StartMigrationCommand } from "../command/startMigrationCommand";
 import { MatchManager } from "../migration/matchManger";
-import { MigrationHolder } from "../migration/migrationHolder";
-import { MigrationLoader } from "../migration/migrationLoader";
+import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
+import { MigrationLoaderRemote } from "../migration/migrationLoaderRemote";
 import { MigrationOutputChannel } from "../migration/migrationOutputChannel";
+import { MigrationScriptProcessController } from "../migrationScriptProcessController";
 import { ChangedContentProvider } from "../providers/changedContentProvider";
 import { CoverageDecorationProvider } from "../providers/coverageDecorationProvider";
 import { QueuedMatchesProvider } from "../providers/queuedMatchesProvider";
@@ -22,14 +23,15 @@ export const modules = new ContainerModule(bind => {
     bind(TYPES.MatchManager).to(MatchManager).inSingletonScope();
     bind(TYPES.MatchesTreeProvider).to(QueuedMatchesProvider).inSingletonScope();
     bind(TYPES.ChangedContentProvider).to(ChangedContentProvider).inSingletonScope();
-    bind(TYPES.MigrationHolder).to(MigrationHolder).inSingletonScope();
-    bind(TYPES.MigrationLoader).to(MigrationLoader).inSingletonScope();
+    bind(TYPES.MigrationHolderRemote).to(MigrationHolderRemote).inSingletonScope();
+    bind(TYPES.MigrationLoaderRemote).to(MigrationLoaderRemote).inSingletonScope();
     bind(TYPES.CommandManager).to(CommandManager).inSingletonScope();
     bind(TYPES.VersionControl).to(VersionControl).inSingletonScope();
     bind(TYPES.GitExtension).to(GitExtension).inSingletonScope();
     bind(TYPES.CoverageDecorationProvider).to(CoverageDecorationProvider).inSingletonScope();
     bind(TYPES.TextDecorationConsumer).to(TextDecorationConsumer).inSingletonScope();
     bind(TYPES.MigrationOutputChannel).to(MigrationOutputChannel).inSingletonScope();
+    bind(TYPES.MigrationScriptProcessController).to(MigrationScriptProcessController).inSingletonScope();
 });
 
 export const vscCommands = new ContainerModule(bind => {

@@ -3,8 +3,8 @@ import { commands, extensions, tasks, window, workspace } from "vscode";
 export const TYPES = {
     VscMigrate: Symbol.for("VSCMigrate"),
     MatchManager: Symbol.for("MatchManager"),
-    MigrationHolder: Symbol.for("MigrationHolder"),
-    MigrationLoader: Symbol.for("MigrationLoader"),
+    MigrationHolderRemote: Symbol.for("MigrationHolder"),
+    MigrationLoaderRemote: Symbol.for("MigrationLoader"),
     MatchesTreeProvider: Symbol.for("ChangesTreeProvider"),
     ChangedContentProvider: Symbol.for("ChangedContentProvider"),
     Command: Symbol.for("Command"),
@@ -13,7 +13,8 @@ export const TYPES = {
     GitExtension: Symbol.for("GitExtension"),
     CoverageDecorationProvider: Symbol.for("CoverageDecorationProvider"),
     TextDecorationConsumer: Symbol.for("CoverageDecorationConsumer"),
-    MigrationOutputChannel: Symbol.for("MigrationOutputChannel")
+    MigrationOutputChannel: Symbol.for("MigrationOutputChannel"),
+    MigrationScriptProcessController: Symbol.for("MigrationScriptProcessController")
 };
 
 export const VSC_TYPES = {
