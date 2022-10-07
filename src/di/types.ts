@@ -3,8 +3,8 @@ import { commands, extensions, tasks, window, workspace } from "vscode";
 export const TYPES = {
     VscMigrate: Symbol.for("VSCMigrate"),
     MatchManager: Symbol.for("MatchManager"),
-    MigrationHolderRemote: Symbol.for("MigrationHolder"),
-    MigrationLoaderRemote: Symbol.for("MigrationLoader"),
+    MigrationHolderRemote: Symbol.for("MigrationHolderRemote"),
+    MigrationLoaderRemote: Symbol.for("MigrationLoaderRemote"),
     MatchesTreeProvider: Symbol.for("ChangesTreeProvider"),
     ChangedContentProvider: Symbol.for("ChangedContentProvider"),
     Command: Symbol.for("Command"),

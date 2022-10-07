@@ -1,4 +1,4 @@
-import { extname } from "path";
+import { extname, join } from "path";
 import { MigrationConstructor, MigrationFactory } from "../migrationTypes";
 import glob = require("matched");
 
@@ -19,6 +19,7 @@ export class MigrationLoader {
 
     public async refresh(dir: string): Promise<Record<string, any>> {
         let files = await glob(["*[!.d].{js,ts}"], { cwd: dir });
+        files = files.map(file => join(dir, file));
         files = this.filterTsMigrations(dir, files);
         await this.fetchMigrationsFrom(files);
         return this.migrationScriptErrors;

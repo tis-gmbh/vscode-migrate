@@ -24,7 +24,9 @@ export class StartMigrationCommand implements Command {
         if (StartMigrationCommand.isRunning) return;
         StartMigrationCommand.isRunning = true;
 
-        await this.startMigration();
+        try {
+            await this.startMigration();
+        } catch (ignore) { }
 
         StartMigrationCommand.isRunning = false;
     }

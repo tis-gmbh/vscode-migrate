@@ -1,10 +1,7 @@
-import { EventEmitter } from "vscode";
 import { CommitInfo, IMigration, MatchedFile } from "../migrationTypes";
 import { MigrationLoader } from "./migrationLoader";
 
 export class MigrationHolder {
-    private readonly changeEmitter = new EventEmitter<void>();
-    public readonly migrationChanged = this.changeEmitter.event;
     private migrationName?: string;
     private migration?: IMigration;
 
@@ -22,7 +19,6 @@ export class MigrationHolder {
     public stop(): void {
         this.migrationName = undefined;
         this.migration = undefined;
-        this.changeEmitter.fire();
     }
 
     public getName(): string | undefined {

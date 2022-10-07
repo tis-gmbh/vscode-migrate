@@ -1,5 +1,5 @@
 import { inject, injectable } from "inversify";
-import { basename } from "path";
+import { basename, join } from "path";
 import { Progress, ProgressLocation } from "vscode";
 import { TYPES, VscWindow, VscWorkspace, VSC_TYPES } from "../di/types";
 import { MigrationScriptProcessController } from "../migrationScriptProcessController";
@@ -24,7 +24,7 @@ export class MigrationLoaderRemote {
         }, async (progress) => {
             this.progress = progress;
             this.updateProgress("Finding files...");
-            const errors = await this.migrationProcess.send("migrationLoader", "refresh");
+            const errors = await this.migrationProcess.send("migrationLoader", "refresh", join(this.workspace.workspaceFolders![0]?.uri.fsPath!, ".vscode", "migrations"));
             for (const [file, error] of Object.entries(errors)) {
                 this.handleMigrationLoadError(file, error);
             }

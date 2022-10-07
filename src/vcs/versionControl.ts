@@ -2,7 +2,7 @@ import { inject, injectable } from "inversify";
 import { Uri } from "vscode";
 import { TYPES, VscWorkspace, VSC_TYPES } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
-import { MigrationHolder } from "../migration/migrationHolder";
+import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { toFileUri } from "../utils/uri";
 import { API, Repository } from "./git";
 import { GitExtension } from "./gitExtension";
@@ -13,7 +13,7 @@ export class VersionControl {
 
     public constructor(
         @inject(TYPES.MatchManager) private readonly matchManager: MatchManager,
-        @inject(TYPES.MigrationHolderRemote) private readonly migrationHolder: MigrationHolder,
+        @inject(TYPES.MigrationHolderRemote) private readonly migrationHolder: MigrationHolderRemote,
         @inject(TYPES.GitExtension) private readonly gitExtension: GitExtension,
         @inject(VSC_TYPES.VscWorkspace) private readonly workspace: VscWorkspace,
     ) { }
