@@ -75,7 +75,7 @@ export class MigrationLoader {
     }
 
     private get require(): typeof require {
-        return global.__non_webpack_require__ || require;
+        return typeof __non_webpack_require__ !== "undefined" ? __non_webpack_require__ : require;
     }
 
     private async tryRequireAsync(file: string): Promise<void> {

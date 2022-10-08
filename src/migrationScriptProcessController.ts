@@ -1,11 +1,17 @@
 import { ChildProcess, fork } from "child_process";
-import { injectable } from "inversify";
+import { inject, injectable } from "inversify";
 import { join } from "path";
+import { TYPES } from "./di/types";
+import { MigrationStdOutChannel } from "./migration/migrationStdOutChannel";
 
 @injectable()
 export class MigrationScriptProcessController {
     private invocationCounter = 0;
     private child = this.createChild();
+
+    public constructor(
+        @inject(TYPES.MigrationStdOutChannel) private readonly migrationStdOutChannel: MigrationStdOutChannel
+    ) { }
 
     private createChild(): ChildProcess {
         const child = fork(join(__dirname, "migrationScriptProcess.js"), {
@@ -13,13 +19,13 @@ export class MigrationScriptProcessController {
             execArgv: ["--inspect=0"]
         });
         child.stdout?.on("data", (data) => {
-            console.log(data + "");
+            this.migrationStdOutChannel.append(data + "");
         });
         child.stderr?.on("error", (data) => {
-            console.error(data + "");
+            this.migrationStdOutChannel.append("ERROR: " + data);
         });
         child.stderr?.on("data", (data) => {
-            console.error(data + "");
+            this.migrationStdOutChannel.append("ERROR: " + data);
         });
         child.on("message", data => {
             console.log(data + "");
@@ -28,11 +34,8 @@ export class MigrationScriptProcessController {
             console.log("Error in child process");
             console.error(data + "");
         });
-        child.on("close", (exitCode, signal) => {
-            console.log(`MigrationScriptProcess is exiting with exit code ${exitCode} and signal ${signal}`);
-        });
         child.on("exit", (exitCode, signal) => {
-            console.log(`MigrationScriptProcess died with exit code ${exitCode} and signal ${signal}. Restarting.`);
+            this.migrationStdOutChannel.append(`MigrationScriptProcess died with exit code ${exitCode} and signal ${signal}. Restarting.\n`);
             this.child = this.createChild();
         });
         return child;

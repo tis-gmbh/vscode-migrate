@@ -8,6 +8,7 @@ import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { MigrationLoaderRemote } from "../migration/migrationLoaderRemote";
 import { MigrationOutputChannel } from "../migration/migrationOutputChannel";
+import { MigrationStdOutChannel } from "../migration/migrationStdOutChannel";
 import { MigrationScriptProcessController } from "../migrationScriptProcessController";
 import { ChangedContentProvider } from "../providers/changedContentProvider";
 import { CoverageDecorationProvider } from "../providers/coverageDecorationProvider";
@@ -32,6 +33,7 @@ export const modules = new ContainerModule(bind => {
     bind(TYPES.TextDecorationConsumer).to(TextDecorationConsumer).inSingletonScope();
     bind(TYPES.MigrationOutputChannel).to(MigrationOutputChannel).inSingletonScope();
     bind(TYPES.MigrationScriptProcessController).to(MigrationScriptProcessController).inSingletonScope();
+    bind(TYPES.MigrationStdOutChannel).to(MigrationStdOutChannel).inSingletonScope();
 });
 
 export const vscCommands = new ContainerModule(bind => {

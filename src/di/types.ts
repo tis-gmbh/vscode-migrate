@@ -14,7 +14,8 @@ export const TYPES = {
     CoverageDecorationProvider: Symbol.for("CoverageDecorationProvider"),
     TextDecorationConsumer: Symbol.for("CoverageDecorationConsumer"),
     MigrationOutputChannel: Symbol.for("MigrationOutputChannel"),
-    MigrationScriptProcessController: Symbol.for("MigrationScriptProcessController")
+    MigrationScriptProcessController: Symbol.for("MigrationScriptProcessController"),
+    MigrationStdOutChannel: Symbol.for("MigrationStdOutChannel")
 };
 
 export const VSC_TYPES = {
