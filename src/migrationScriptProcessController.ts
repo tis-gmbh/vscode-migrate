@@ -1,7 +1,7 @@
 import { ChildProcess, fork } from "child_process";
 import { inject, injectable } from "inversify";
 import { join } from "path";
-import { TYPES } from "./di/types";
+import { TYPES, VscWindow, VSC_TYPES } from "./di/types";
 import { MigrationStdOutChannel } from "./migration/migrationStdOutChannel";
 
 @injectable()
@@ -10,7 +10,8 @@ export class MigrationScriptProcessController {
     private child = this.createChild();
 
     public constructor(
-        @inject(TYPES.MigrationStdOutChannel) private readonly migrationStdOutChannel: MigrationStdOutChannel
+        @inject(TYPES.MigrationStdOutChannel) private readonly migrationStdOutChannel: MigrationStdOutChannel,
+        @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow
     ) { }
 
     private createChild(): ChildProcess {
@@ -27,15 +28,17 @@ export class MigrationScriptProcessController {
         child.stderr?.on("data", (data) => {
             this.migrationStdOutChannel.append("ERROR: " + data);
         });
-        child.on("message", data => {
-            console.log(data + "");
-        });
         child.on("error", (data) => {
-            console.log("Error in child process");
-            console.error(data + "");
+            this.migrationStdOutChannel.append("ERROR: " + data);
         });
         child.on("exit", (exitCode, signal) => {
             this.migrationStdOutChannel.append(`MigrationScriptProcess died with exit code ${exitCode} and signal ${signal}. Restarting.\n`);
+            void this.window.showWarningMessage("MigrationScriptProcess died and is being restarted.", "Show Output")
+                .then(result => {
+                    if (result === "Show Output") {
+                        this.migrationStdOutChannel.show();
+                    }
+                });
             this.child = this.createChild();
         });
         return child;

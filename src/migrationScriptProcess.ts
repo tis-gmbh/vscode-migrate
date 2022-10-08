@@ -12,7 +12,6 @@ const targets = {
 };
 // process.on("SIGPIPE", console.error);
 process.on("message", async (message) => {
-    console.log(message);
     const targetName = message.target;
     const methodName = message.methodName;
     const args = message.args || [];
