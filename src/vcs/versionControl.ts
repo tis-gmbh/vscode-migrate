@@ -52,12 +52,12 @@ export class VersionControl {
             matchLabel: match.match.label,
         });
 
-        return commitMessage || this.getDefaultMessageFor(matchUri);
+        return commitMessage || await this.getDefaultMessageFor(matchUri);
     }
 
-    private getDefaultMessageFor(matchUri: Uri): string {
+    private async getDefaultMessageFor(matchUri: Uri): Promise<string> {
         const match = this.matchManager.byMatchUriOrThrow(matchUri);
-        const migration = this.migrationHolder.getName();
+        const migration = await this.migrationHolder.getName();
         const relativePath = this.workspace.asRelativePath(toFileUri(matchUri));
 
         return `(Auto) Migration '${migration}' for '${relativePath}' labeled '${match.match.label}'`;

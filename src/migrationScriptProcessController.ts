@@ -13,20 +13,20 @@ export class MigrationScriptProcessController {
             execArgv: ["--inspect=0"]
         });
         child.stdout?.on("data", (data) => {
-            console.log(new String(data));
+            console.log(data + "");
         });
         child.stderr?.on("error", (data) => {
-            console.error(new String(data));
+            console.error(data + "");
         });
         child.stderr?.on("data", (data) => {
-            console.error(new String(data));
+            console.error(data + "");
         });
         child.on("message", data => {
-            console.log(new String(data));
+            console.log(data + "");
         });
         child.on("error", (data) => {
             console.log("Error in child process");
-            console.error(new String(data));
+            console.error(data + "");
         });
         child.on("close", (exitCode, signal) => {
             console.log(`MigrationScriptProcess is exiting with exit code ${exitCode} and signal ${signal}`);
@@ -42,7 +42,6 @@ export class MigrationScriptProcessController {
         const invocationId = this.invocationCounter++;
         return new Promise<any>((res, rej) => {
             const listener = (message: any): void => {
-                console.log(message);
                 try {
                     message = JSON.parse(message);
                     if (message.invocationId === invocationId) {

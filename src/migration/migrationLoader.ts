@@ -75,14 +75,18 @@ export class MigrationLoader {
     }
 
     private get require(): typeof require {
-        return __non_webpack_require__;
+        return global.__non_webpack_require__ || require;
     }
 
     private async tryRequireAsync(file: string): Promise<void> {
         try {
             await this.requireAsync(file);
-        } catch (error) {
-            this.migrationScriptErrors[file] = error;
+        } catch (error: any) {
+            this.migrationScriptErrors[file] = {
+                message: error.message,
+                stack: error.stack,
+                code: error.code
+            };
         }
     }
 

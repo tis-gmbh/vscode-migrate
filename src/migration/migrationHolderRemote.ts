@@ -32,7 +32,7 @@ export class MigrationHolderRemote {
     }
 
     public async getName(): Promise<string | undefined> {
-        return this.migrationProcess.send("migrationHolder", "getName");
+        return await this.migrationProcess.send("migrationHolder", "getName");
     }
 
     public async hasMigration(): Promise<boolean> {
