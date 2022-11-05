@@ -24,7 +24,7 @@ export class MigrationLoaderRemote {
         }, async (progress) => {
             this.progress = progress;
             this.updateProgress("Finding files...");
-            const errors = await this.migrationProcess.send("migrationLoader", "refresh", join(this.workspace.workspaceFolders![0]?.uri.fsPath!, ".vscode", "migrations"));
+            const errors = await this.migrationProcess.send("refreshMigrations", join(this.workspace.workspaceFolders![0]?.uri.fsPath!, ".vscode", "migrations"));
             for (const [file, error] of Object.entries(errors)) {
                 this.handleMigrationLoadError(file, error);
             }
@@ -46,6 +46,6 @@ export class MigrationLoaderRemote {
     }
 
     public getNames(): Promise<string[]> {
-        return this.migrationProcess.send("migrationLoader", "getNames");
+        return this.migrationProcess.send("getMigrationNames");
     }
 }

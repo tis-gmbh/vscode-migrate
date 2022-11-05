@@ -112,6 +112,7 @@
           "inversify": "^6.0.1",
           "lcov-parse": "^1.0.0",
           "matched": "^5.0.1",
-          "reflect-metadata": "^0.1.13"
+          "reflect-metadata": "^0.1.13",
+          "worker-rpc": "^0.2.0"
      }
 }

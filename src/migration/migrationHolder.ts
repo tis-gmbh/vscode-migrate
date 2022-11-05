@@ -37,7 +37,7 @@ export class MigrationHolder {
         return await this.migration!.getCommitMessage?.(commitInfo);
     }
 
-    public verify(): Promise<void> | void {
-        return this.migration!.verify?.();
+    public async verify(): Promise<void> {
+        await this.migration!.verify?.();
     }
 }

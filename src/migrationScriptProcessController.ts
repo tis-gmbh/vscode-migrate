@@ -1,18 +1,18 @@
-import { ChildProcess, fork, Serializable } from "child_process";
+import { ChildProcess, fork } from "child_process";
 import { inject, injectable } from "inversify";
 import { join } from "path";
+import { RpcProvider } from "worker-rpc";
 import { TYPES, VscWindow, VSC_TYPES } from "./di/types";
 import { MigrationOutputChannel } from "./migration/migrationOutputChannel";
 import { MigrationStdOutChannel } from "./migration/migrationStdOutChannel";
+import { RPCInterface, RPCMethodNames } from "./rpcMethods";
 
-type SuccessListener = (result: any) => void;
-type ErrorListener = (error: any) => void;
+type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
 @injectable()
 export class MigrationScriptProcessController {
-    private invocationCounter = 0;
+    private rpcProvider: RpcProvider = new RpcProvider(message => this.child.send(message));
     private child = this.createChild();
-    private invocationListeners: Record<number, [SuccessListener, ErrorListener]> = {};
 
     public constructor(
         @inject(TYPES.MigrationStdOutChannel) private readonly migrationStdOutChannel: MigrationStdOutChannel,
@@ -47,53 +47,20 @@ export class MigrationScriptProcessController {
                 });
             this.child = this.createChild();
         });
-        child.on("message", message => this.processMessage(message));
+        this.rpcProvider = new RpcProvider(message => this.child.send(message));
+        this.rpcProvider.error.addHandler(error => {
+            this.migrationOutputChannel.append(error.stack || error.message);
+        });
+        child.on("message", message => this.rpcProvider?.dispatch(message));
         return child;
     }
 
-    private processMessage(message: Serializable): void {
+    public async send<M extends RPCMethodNames>(methodName: M, ...args: Parameters<RPCInterface[M]>): Promise<UnwrapPromise<ReturnType<RPCInterface[M]>>> {
         try {
-            const parsedMessage = JSON.parse(message.toString());
-
-            const invocationId = parsedMessage.invocationId;
-            const handlers = this.invocationListeners[invocationId];
-
-            if (!handlers) {
-                return;
-            }
-
-            if (parsedMessage.error) {
-                handlers[1](parsedMessage.error);
-            } else {
-                handlers[0](parsedMessage.result);
-            }
-        } catch (error) {
-            this.migrationOutputChannel.append("Failed to parse message: " + message);
+            return await this.rpcProvider.rpc(methodName, args) as any;
+        } catch (e: any) {
+            this.migrationOutputChannel.append(e.stack || e.message || "An unknown error occurred during rpc transmission.");
+            throw e;
         }
-    }
-
-    public send(target: string, methodName: string, ...args: any[]): Promise<any> {
-        const invocationId = this.invocationCounter++;
-        return new Promise<any>((res, rej) => {
-            this.registerInvocationListener(invocationId, res, rej);
-            try {
-                this.child.send({
-                    invocationId: invocationId,
-                    target,
-                    methodName,
-                    args
-                });
-            } catch (error) {
-                rej(error);
-            }
-        });
-    }
-
-    private registerInvocationListener(
-        invocationId: number,
-        onSuccess: SuccessListener,
-        onError: ErrorListener
-    ): void {
-        this.invocationListeners[invocationId] = [onSuccess, onError];
     }
 }

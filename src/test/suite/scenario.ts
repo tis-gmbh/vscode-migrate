@@ -43,7 +43,7 @@ export class Scenario {
     public readonly actual = fileReaderFor(this.actualPath());
     public readonly expected = fileReaderFor(this.expectationPath());
 
-    private readonly container: Container;
+    public readonly container: Container;
     public readonly vsCodeMigrate: VSCodeMigrate;
     private readonly matchManager: MatchManager;
     private readonly treeProvider: TreeDataProvider<string>;

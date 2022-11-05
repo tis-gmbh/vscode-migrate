@@ -19,7 +19,7 @@ export class MigrationHolderRemote {
 
     public async start(migrationName: string): Promise<void> {
         try {
-            await this.migrationProcess.send("migrationHolder", "start", migrationName);
+            await this.migrationProcess.send("startMigration", migrationName);
         } catch (error) {
             this.handleMigrationError(error);
         }
@@ -27,12 +27,12 @@ export class MigrationHolderRemote {
     }
 
     public async stop(): Promise<void> {
-        await this.migrationProcess.send("migrationHolder", "stop");
+        await this.migrationProcess.send("stopMigration");
         this.changeEmitter.fire();
     }
 
     public async getName(): Promise<string | undefined> {
-        return await this.migrationProcess.send("migrationHolder", "getName");
+        return await this.migrationProcess.send("getMigrationName");
     }
 
     public async hasMigration(): Promise<boolean> {
@@ -42,7 +42,7 @@ export class MigrationHolderRemote {
 
     public async getMatchedFiles(): Promise<MatchedFile[]> {
         try {
-            return await this.migrationProcess.send("migrationHolder", "getMatchedFiles");
+            return await this.migrationProcess.send("getMatchedFiles");
         } catch (error: any) {
             this.handleMigrationError(error);
             return [];
@@ -51,7 +51,7 @@ export class MigrationHolderRemote {
 
     public async getCommitMessage(commitInfo: CommitInfo): Promise<string | undefined> {
         try {
-            return await this.migrationProcess.send("migrationHolder", "getCommitMessage", commitInfo);
+            return await this.migrationProcess.send("getCommitMessage", commitInfo);
         } catch (error: any) {
             this.handleMigrationError(error);
             return undefined;
@@ -60,7 +60,7 @@ export class MigrationHolderRemote {
 
     public verify(): Promise<void> | void {
         // DO NOT catch any errors here, as a verification failure needs to be reported
-        return this.migrationProcess.send("migrationHolder", "verify");
+        return this.migrationProcess.send("verify");
     }
 
     private handleMigrationError(error: any): void {
