@@ -39,6 +39,7 @@ class BracketMigration implements IMigration {
 
     public getCommitMessage(commitInfo: CommitInfo): string {
         const relativePath = relative(resolve(__dirname, "../.."), commitInfo.filePath);
-        return `Migration 'Brackets - Custom Commit Message' for '${relativePath}' labeled '${commitInfo.matchLabel}' but the commit message is custom`
+        const normalizedPath = relativePath.replace(/\\/g, "/");
+        return `Migration 'Brackets - Custom Commit Message' for '${normalizedPath}' labeled '${commitInfo.matchLabel}' but the commit message is custom`
     }
 }
