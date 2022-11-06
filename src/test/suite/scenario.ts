@@ -2,9 +2,10 @@ import { readFileSync } from "fs";
 import { copySync, emptyDirSync } from "fs-extra";
 import { Container } from "inversify";
 import { join, resolve } from "path";
-import { commands, DecorationInstanceRenderOptions, FileChangeType, FileSystemProvider, MessageOptions, Range as VscRange, TextDocument, TreeDataProvider, TreeItem, TreeItemLabel, Uri, window } from "vscode";
+import { commands, debug, DecorationInstanceRenderOptions, FileChangeType, FileSystemProvider, Location, MessageOptions, Position as SourcePosition, Range as VscRange, SourceBreakpoint, TextDocument, TreeDataProvider, TreeItem, TreeItemLabel, Uri, window } from "vscode";
 import { ApplyChangeCommand } from "../../command/applyChangeCommand";
 import { Command } from "../../command/command";
+import { DebugMigrationScriptProcessCommand } from "../../command/debugMigrationScriptProcesCommand";
 import { modules, vscCommands, vscModules } from "../../di/inversify.config";
 import { TYPES } from "../../di/types";
 import { MatchManager } from "../../migration/matchManger";
@@ -87,15 +88,19 @@ export class Scenario {
         if (this.contentProvider.onDidChangeFile) {
             this.contentProvider.onDidChangeFile((...args) => this.contentUpdates.push(args));
         }
+
+        debug.removeBreakpoints(debug.breakpoints);
     }
 
-    public static async load(name: string, migrationName: string): Promise<Scenario> {
+    public static async load(name: string, migrationName?: string): Promise<Scenario> {
         const scenario = new Scenario(name);
-        await scenario.startMigration(migrationName);
+        if (migrationName) {
+            await scenario.startMigration(migrationName);
+        }
         return scenario;
     }
 
-    private async startMigration(migrationName: string): Promise<void> {
+    public async startMigration(migrationName: string): Promise<void> {
         const migrationLoader = this.container.get<MigrationLoaderRemote>(TYPES.MigrationLoaderRemote);
         const migrationHolder = this.container.get<MigrationHolderRemote>(TYPES.MigrationHolderRemote);
         await migrationLoader.refresh();
@@ -251,13 +256,13 @@ export class Scenario {
     public async applyChangesFor(matchUri: Uri): Promise<void> {
         const applyChangeCommand = this.getCommand<ApplyChangeCommand>("vscode-migrate.apply-change");
         this.setModified(toFileUri(matchUri));
-        await applyChangeCommand?.execute(matchUri);
+        await applyChangeCommand.execute(matchUri);
     }
 
-    public getCommand<T extends Command>(id: string): T | undefined {
+    public getCommand<T extends Command>(id: string): T {
         return this.container
             .getAll<T>(TYPES.Command)
-            .find(command => command.id === id);
+            .find(command => command.id === id)!;
     }
 
     public async applyAllFor(fileUri: Uri): Promise<void> {
@@ -312,6 +317,41 @@ export class Scenario {
                 range: transformRange(decoration.range),
                 options: decoration.renderOptions
             };
+        });
+    }
+
+    public addBreakpoint(fileUri: Uri, position: SourcePosition): Promise<void> {
+        return new Promise(res => {
+            const disposable = debug.onDidChangeBreakpoints(() => {
+                disposable.dispose();
+                res();
+            });
+            debug.addBreakpoints([new SourceBreakpoint(new Location(fileUri, position))]);
+        });
+    }
+
+    public async startDebugging(): Promise<void> {
+        const debugCommand = this.getCommand<DebugMigrationScriptProcessCommand>("vscode-migrate.debug-migration-script-process");
+        await debugCommand.execute();
+    }
+
+    public async waitForBreakpointHit(): Promise<SourceBreakpoint> {
+        return new Promise(res => {
+            debug.registerDebugAdapterTrackerFactory("pwa-node", {
+                createDebugAdapterTracker() {
+                    return {
+                        onDidSendMessage(message: any): void {
+                            if (message.type === "event"
+                                && message.event === "stopped"
+                                && message.body.reason === "breakpoint") {
+                                const breakpointId = message.body.hitBreakpointIds[0];
+                                const breakpoint = debug.breakpoints[breakpointId];
+                                res(breakpoint as SourceBreakpoint);
+                            }
+                        }
+                    };
+                }
+            });
         });
     }
 }

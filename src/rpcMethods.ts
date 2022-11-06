@@ -11,4 +11,5 @@ export interface RPCInterface {
     getMigrationNames: () => string[];
     refreshMigrations: (dir: string) => Promise<Record<string, any>>;
     verify: () => Promise<void>;
+    getDebugPort(): Promise<number>;
 };

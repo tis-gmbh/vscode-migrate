@@ -19,6 +19,7 @@
      "activationEvents": [
           "onCommand:vscode-migrate.start-migration",
           "onCommand:vscode-migrate.show-change",
+          "onCommand:vscode-migrate.debug-migration-script-process",
           "onView:vscode-migrate.queued-matches",
           "onFileSystem:match"
      ],
@@ -33,7 +34,13 @@
                },
                {
                     "command": "vscode-migrate.start-migration",
-                    "title": "VSCode Migrate: Start Migration"
+                    "title": "VSCode Migrate: Start Migration",
+                    "icon": "$(run)"
+               },
+               {
+                    "command": "vscode-migrate.debug-migration-script-process",
+                    "title": "VSCode Migrate: Debug Migration Script",
+                    "icon": "$(bug)"
                }
           ],
           "menus": {
@@ -93,6 +100,7 @@
           "@types/vscode": "^1.67.0",
           "@typescript-eslint/eslint-plugin": "^5.21.0",
           "@typescript-eslint/parser": "^5.21.0",
+          "@vscode/debugadapter-testsupport": "^1.58.0",
           "@vscode/test-electron": "^2.1.5",
           "chai": "^4.3.6",
           "eol": "^0.9.1",

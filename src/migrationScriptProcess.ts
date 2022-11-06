@@ -3,36 +3,39 @@ process.on("uncaughtException", error => process.send!(JSON.stringify(error)));
 import { RpcProvider } from "worker-rpc";
 import { MigrationHolder } from "./migration/migrationHolder";
 import { MigrationLoader } from "./migration/migrationLoader";
-import { CommitInfo, MatchedFile } from "./migrationTypes";
+import { CommitInfo } from "./migrationTypes";
 import { RPCInterface } from "./rpcMethods";
 
 const migrationLoader = new MigrationLoader();
 const migrationHolder = new MigrationHolder(migrationLoader);
 
 const handler: RPCInterface = {
-    startMigration: function (migrationName: string): Promise<void> {
+    startMigration(migrationName: string) {
         return migrationHolder.start(migrationName);
     },
-    stopMigration: function (): void {
+    stopMigration() {
         return migrationHolder.stop();
     },
-    getMigrationName: function (): string | undefined {
+    getMigrationName() {
         return migrationHolder.getName();
     },
-    getMatchedFiles: function (): Promise<MatchedFile[]> {
+    getMatchedFiles() {
         return migrationHolder.getMatchedFiles();
     },
-    getCommitMessage: function (commitInfo: CommitInfo): Promise<string | undefined> {
+    getCommitMessage(commitInfo: CommitInfo) {
         return migrationHolder.getCommitMessage(commitInfo);
     },
-    getMigrationNames: function (): string[] {
+    getMigrationNames() {
         return migrationLoader.getNames();
     },
-    refreshMigrations: function (dir: string): Promise<Record<string, any>> {
+    refreshMigrations(dir: string) {
         return migrationLoader.refresh(dir);
     },
-    verify: function (): Promise<void> {
+    verify() {
         return migrationHolder.verify();
+    },
+    getDebugPort() {
+        return Promise.resolve(process.debugPort);
     }
 };
 

@@ -1,4 +1,4 @@
-import { commands, extensions, tasks, window, workspace } from "vscode";
+import { commands, debug, extensions, tasks, window, workspace } from "vscode";
 
 export const TYPES = {
     VscMigrate: Symbol.for("VSCMigrate"),
@@ -23,7 +23,8 @@ export const VSC_TYPES = {
     VscWorkspace: Symbol.for("VscWorkspace"),
     VscWindow: Symbol.for("VscWindow"),
     VscExtensions: Symbol.for("VscExtensions"),
-    VscTasks: Symbol.for("VscTasks")
+    VscTasks: Symbol.for("VscTasks"),
+    VscDebug: Symbol.for("VscDebug")
 };
 
 export type VscCommands = typeof commands;
@@ -31,3 +32,4 @@ export type VscWorkspace = typeof workspace;
 export type VscWindow = typeof window;
 export type VscExtensions = typeof extensions;
 export type VscTasks = typeof tasks;
+export type VscDebug = typeof debug;

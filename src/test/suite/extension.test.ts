@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { Position, Range } from "vscode";
 import { fileUriToFsPath, stringify, toFileUri, toMatchUri } from "../../utils/uri";
 import { createCoverageScheme, Scenario } from "./scenario";
 
@@ -190,5 +191,22 @@ suite("VSCode Migrate", () => {
         expect(scenario.stagedPaths[0]).to.contain(fileUriToFsPath(toFileUri(firstMatch)));
         expect(scenario.stagedPaths[0]).to.contain(scenario.actualPath("src/secondFile.ts"));
         expect(scenario.stagedPaths[0]).to.contain(scenario.actualPath("src/newlyAddedFile.ts"));
+    });
+
+    test("debugs migration script process", async () => {
+        const scenario = await Scenario.load("singleFile");
+
+        const breakPointHold = scenario.waitForBreakpointHit();
+        await scenario.addBreakpoint(
+            scenario.actualUri(".vscode/migrations/bracketMigration.ts"),
+            new Position(11, 9)
+        );
+        await scenario.startDebugging();
+        void scenario.startMigration("Brackets");
+
+        const breakpoint = await breakPointHold;
+        expect(breakpoint.location.range).to.deep.equal(new Range(new Position(11, 9), new Position(11, 9)));
+        expect(stringify(breakpoint.location.uri))
+            .to.equal(stringify(scenario.actualUri(".vscode/migrations/bracketMigration.ts")));
     });
 });
