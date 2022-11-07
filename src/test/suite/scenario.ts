@@ -348,7 +348,9 @@ export class Scenario {
                                 const mappedBreakpoints = await Promise.all(debug.breakpoints.map(async breakpoint =>
                                     session.getDebugProtocolBreakpoint(breakpoint)
                                 ));
-                                const breakpointIndex = mappedBreakpoints.findIndex(breakpoint => (breakpoint as any)?.id === breakpointId);
+                                const breakpointIndex = mappedBreakpoints.findIndex(breakpoint =>
+                                    (breakpoint as any)?.id === breakpointId
+                                );
                                 res(debug.breakpoints[breakpointIndex] as SourceBreakpoint);
                             }
                         }
