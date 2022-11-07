@@ -2,7 +2,7 @@ import { readFileSync } from "fs";
 import { copySync, emptyDirSync } from "fs-extra";
 import { Container } from "inversify";
 import { join, resolve } from "path";
-import { commands, debug, DecorationInstanceRenderOptions, FileChangeType, FileSystemProvider, Location, MessageOptions, Position as SourcePosition, Range as VscRange, SourceBreakpoint, TextDocument, TreeDataProvider, TreeItem, TreeItemLabel, Uri, window } from "vscode";
+import { commands, debug, DebugSession, DecorationInstanceRenderOptions, FileChangeType, FileSystemProvider, Location, MessageOptions, Position as SourcePosition, Range as VscRange, SourceBreakpoint, TextDocument, TreeDataProvider, TreeItem, TreeItemLabel, Uri, window } from "vscode";
 import { ApplyChangeCommand } from "../../command/applyChangeCommand";
 import { Command } from "../../command/command";
 import { DebugMigrationScriptProcessCommand } from "../../command/debugMigrationScriptProcesCommand";
@@ -338,15 +338,18 @@ export class Scenario {
     public async waitForBreakpointHit(): Promise<SourceBreakpoint> {
         return new Promise(res => {
             debug.registerDebugAdapterTrackerFactory("pwa-node", {
-                createDebugAdapterTracker() {
+                createDebugAdapterTracker(session: DebugSession) {
                     return {
-                        onDidSendMessage(message: any): void {
+                        async onDidSendMessage(message: any): Promise<void> {
                             if (message.type === "event"
                                 && message.event === "stopped"
                                 && message.body.reason === "breakpoint") {
                                 const breakpointId = message.body.hitBreakpointIds[0];
-                                const breakpoint = debug.breakpoints[breakpointId];
-                                res(breakpoint as SourceBreakpoint);
+                                const mappedBreakpoints = await Promise.all(debug.breakpoints.map(async breakpoint =>
+                                    session.getDebugProtocolBreakpoint(breakpoint)
+                                ));
+                                const breakpointIndex = mappedBreakpoints.findIndex(breakpoint => (breakpoint as any)?.id === breakpointId);
+                                res(debug.breakpoints[breakpointIndex] as SourceBreakpoint);
                             }
                         }
                     };
