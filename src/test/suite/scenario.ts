@@ -11,6 +11,8 @@ import { TYPES } from "../../di/types";
 import { MatchManager } from "../../migration/matchManger";
 import { MigrationHolderRemote } from "../../migration/migrationHolderRemote";
 import { MigrationLoaderRemote } from "../../migration/migrationLoaderRemote";
+import { MigrationOutputChannel } from "../../migration/migrationOutputChannel";
+import { MigrationStdOutChannel } from "../../migration/migrationStdOutChannel";
 import { fsPathToFileUri, stringify, toFileUri } from "../../utils/uri";
 import { API, Change, Repository, Status } from "../../vcs/git";
 import { GitExtension } from "../../vcs/gitExtension";
@@ -43,6 +45,7 @@ export class Scenario {
     public readonly original = fileReaderFor(this.originalPath());
     public readonly actual = fileReaderFor(this.actualPath());
     public readonly expected = fileReaderFor(this.expectationPath());
+    private readonly logs: string[] = [];
 
     public readonly container: Container;
     public readonly vsCodeMigrate: VSCodeMigrate;
@@ -117,6 +120,7 @@ export class Scenario {
         this.createMessageLogger("showErrorMessage");
         this.createMessageLogger("showWarningMessage");
         this.createCommandsLogger();
+        this.createOutputLogger();
         this.rebindGitExtension();
     }
 
@@ -145,6 +149,23 @@ export class Scenario {
             });
             return result;
         };
+    }
+
+    private createOutputLogger(): void {
+        const scenario = this;
+        this.container.rebind(TYPES.MigrationOutputChannel).to(class extends MigrationOutputChannel {
+            public append(value: string): void {
+                scenario.logs.push("MigrationOutputChannel: " + value);
+                super.append(value);
+            }
+        }).inSingletonScope();
+
+        this.container.rebind(TYPES.MigrationStdOutChannel).to(class extends MigrationStdOutChannel {
+            public append(value: string): void {
+                scenario.logs.push("MigrationStdOutChannel: " + value);
+                super.append(value);
+            }
+        }).inSingletonScope();
     }
 
     private rebindGitExtension(): void {
@@ -245,7 +266,7 @@ export class Scenario {
     }
 
     public async getTreeItemsOf(treeElement: string): Promise<TreeItem[]> {
-        const children = await this.treeProvider.getChildren(treeElement) || [];
+        const children = (await this.treeProvider.getChildren(treeElement)) || [];
         return Promise.all(children.map(c => this.treeProvider.getTreeItem(c)));
     }
 
@@ -267,6 +288,7 @@ export class Scenario {
 
     public async applyAllFor(fileUri: Uri): Promise<void> {
         let currentMatches = this.matchManager.getMatchUrisByFileUri(fileUri);
+        this.log(`Applying all ${currentMatches.length} changes for ${fileUri.fsPath}`);
         while (true) {
             const nextMatch = currentMatches[0];
             if (!nextMatch) break;
@@ -275,6 +297,7 @@ export class Scenario {
             if (currentMatches.length <= newMatches.length) throw new Error(`Stuck at applying ${newMatches.length} matches.`);
             currentMatches = newMatches;
         }
+        this.log(`Applied all ${currentMatches.length} changes for ${fileUri.fsPath}`);
     }
 
     public async getChangedContentFor(matchUri: Uri): Promise<string> {
@@ -292,6 +315,7 @@ export class Scenario {
                     stringify(file.uri) === stringifiedUri
                     && file.type === FileChangeType.Changed
                 )) {
+                    this.log(`File ${stringifiedUri} received an update.`);
                     res();
                 }
             });
@@ -299,12 +323,14 @@ export class Scenario {
     }
 
     public async modifyContent(matchUri: Uri, callback: (originalContent: string) => string): Promise<void> {
+        this.log(`Modifying content of ${matchUri}`);
         const originalBuffer = await this.contentProvider.readFile(matchUri);
         this.contentProvider.watch(matchUri, { recursive: false, excludes: [] });
         const originalContent = originalBuffer.toString();
         const newContent = callback(originalContent);
         const buffer = Buffer.from(newContent);
         await this.contentProvider.writeFile(matchUri, buffer, { create: false, overwrite: true });
+        this.log(`Modified content of ${matchUri}`);
     }
 
     public async getDecorationsFor(fileUri: Uri): Promise<Decoration[]> {
@@ -321,9 +347,11 @@ export class Scenario {
     }
 
     public addBreakpoint(fileUri: Uri, position: SourcePosition): Promise<void> {
+        this.log(`Adding breakpoint at ${fileUri.fsPath}:${position.line}`);
         return new Promise(res => {
             const disposable = debug.onDidChangeBreakpoints(() => {
                 disposable.dispose();
+                this.log(`Breakpoint added at ${fileUri.fsPath}:${position.line}`);
                 res();
             });
             debug.addBreakpoints([new SourceBreakpoint(new Location(fileUri, position))]);
@@ -331,11 +359,14 @@ export class Scenario {
     }
 
     public async startDebugging(): Promise<void> {
+        this.log("Starting debugging...");
         const debugCommand = this.getCommand<DebugMigrationScriptProcessCommand>("vscode-migrate.debug-migration-script-process");
         await debugCommand.execute();
+        this.log("Debugging started.");
     }
 
     public async waitForBreakpointHit(): Promise<SourceBreakpoint> {
+        const scenario = this;
         return new Promise(res => {
             debug.registerDebugAdapterTrackerFactory("pwa-node", {
                 createDebugAdapterTracker(session: DebugSession) {
@@ -351,13 +382,25 @@ export class Scenario {
                                 const breakpointIndex = mappedBreakpoints.findIndex(breakpoint =>
                                     (breakpoint as any)?.id === breakpointId
                                 );
-                                res(debug.breakpoints[breakpointIndex] as SourceBreakpoint);
+                                const hitBreakpoint = debug.breakpoints[breakpointIndex] as SourceBreakpoint;
+                                scenario.log("Hit breakpoint at " + stringify(hitBreakpoint.location.uri) + ":" + hitBreakpoint.location.range.start.line);
+                                res(hitBreakpoint);
                             }
                         }
                     };
                 }
             });
         });
+    }
+
+    private log(message: string): void {
+        this.logs.push("Scenario: " + message);
+    }
+
+    public dumpLogs(): void {
+        for (const log of this.logs) {
+            console.log(log);
+        }
     }
 }
 

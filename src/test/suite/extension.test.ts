@@ -4,8 +4,17 @@ import { fileUriToFsPath, stringify, toFileUri, toMatchUri } from "../../utils/u
 import { createCoverageScheme, Scenario } from "./scenario";
 
 suite("VSCode Migrate", () => {
+    let scenario: Scenario;
+
+    teardown(function () {
+        if (this.currentTest?.state === "failed") {
+            scenario?.dumpLogs();
+        }
+        (scenario as any) = undefined;
+    });
+
     test("shows matches", async () => {
-        const scenario = await Scenario.load("twoFile", "Brackets");
+        scenario = await Scenario.load("twoFile", "Brackets");
         const actualTree = await scenario.getDisplayedTree();
         const expectedTree = {
             "firstFile.ts": [
@@ -23,7 +32,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("generates the change", async () => {
-        const scenario = await Scenario.load("singleFile", "Brackets");
+        scenario = await Scenario.load("singleFile", "Brackets");
         const firstMatch = scenario.getFirstMatch()!;
         const expectedNewContent = scenario.expected("src/main.ts");
 
@@ -33,7 +42,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("generates code coverage decorations", async () => {
-        const scenario = await Scenario.load("singleFile", "Brackets");
+        scenario = await Scenario.load("singleFile", "Brackets");
 
         const decorations = await scenario.getDecorationsFor(scenario.actualUri("src/main.ts"));
 
@@ -54,7 +63,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("applies a change", async () => {
-        const scenario = await Scenario.load("singleFile", "Brackets");
+        scenario = await Scenario.load("singleFile", "Brackets");
         const firstMatch = scenario.getFirstMatch()!;
         await scenario.applyChangesFor(firstMatch);
         const expectedNewContent = scenario.expected("src/main.ts");
@@ -69,7 +78,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("updates matches when change was applied", async () => {
-        const scenario = await Scenario.load("singleFile", "Brackets");
+        scenario = await Scenario.load("singleFile", "Brackets");
         const firstMatch = scenario.getFirstMatch()!;
         const expectedTree = {
             "main.ts": [
@@ -86,7 +95,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("removes file from tree when all changes have been applied", async () => {
-        const scenario = await Scenario.load("twoFile", "Brackets");
+        scenario = await Scenario.load("twoFile", "Brackets");
         const filePath = scenario.actualUri("src/firstFile.ts");
         const expectedTree = {
             "secondFile.ts": [
@@ -102,7 +111,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("saves change that was manually modified", async () => {
-        const scenario = await Scenario.load("manualModification", "Brackets");
+        scenario = await Scenario.load("manualModification", "Brackets");
         const firstMatch = scenario.getFirstMatch()!;
         const expectedContent = scenario.expected("src/main.ts");
 
@@ -115,7 +124,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("updates content of editor when another change was applied", async () => {
-        const scenario = await Scenario.load("applyWhileEdit", "Brackets");
+        scenario = await Scenario.load("applyWhileEdit", "Brackets");
         const secondMatch = scenario.getNthMatchUriOf(scenario.actualUri("src/main.ts"), 2);
         await scenario.getChangedContentFor(secondMatch);
 
@@ -129,7 +138,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("merges manual modifications with updates from disk", async () => {
-        const scenario = await Scenario.load("manualMerge", "Brackets");
+        scenario = await Scenario.load("manualMerge", "Brackets");
         const secondMatch = scenario.getNthMatchUriOf(scenario.actualUri("src/main.ts"), 2);
         await scenario.modifyContent(secondMatch, original => original.replace(
             "No match", "manual modification"
@@ -145,7 +154,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("opens diff when tree item is selected", async () => {
-        const scenario = await Scenario.load("singleFile", "Brackets");
+        scenario = await Scenario.load("singleFile", "Brackets");
         const fileUri = scenario.actualUri("src/main.ts");
         const firstTreeItem = (await scenario.getTreeItemsOfUri(fileUri))[0]!;
         const command = firstTreeItem.command!;
@@ -159,7 +168,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("Show identical file when match isn't found", async () => {
-        const scenario = await Scenario.load("singleFile", "Brackets");
+        scenario = await Scenario.load("singleFile", "Brackets");
         const unchangedContent = scenario.actual("src/main.ts");
         const invalidMatchUri = toMatchUri(scenario.actualUri("src/main.ts"), "999999");
 
@@ -169,7 +178,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("commits with custom commit message", async () => {
-        const scenario = await Scenario.load("singleFile", "Brackets - Custom Commit Message");
+        scenario = await Scenario.load("singleFile", "Brackets - Custom Commit Message");
         const firstMatch = scenario.getFirstMatch();
 
         await scenario.applyChangesFor(firstMatch);
@@ -180,7 +189,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("commits all modified and untracked files", async () => {
-        const scenario = await Scenario.load("twoFile", "Brackets");
+        scenario = await Scenario.load("twoFile", "Brackets");
         const firstMatch = scenario.getFirstMatch();
 
         scenario.setModified(scenario.actualUri("src/secondFile.ts"));
@@ -194,7 +203,7 @@ suite("VSCode Migrate", () => {
     });
 
     test("debugs migration script process", async () => {
-        const scenario = await Scenario.load("singleFile");
+        scenario = await Scenario.load("singleFile");
 
         const breakPointHold = scenario.waitForBreakpointHit();
         await scenario.addBreakpoint(
