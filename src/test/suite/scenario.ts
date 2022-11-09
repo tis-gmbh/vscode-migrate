@@ -6,6 +6,7 @@ import { commands, debug, DebugSession, DecorationInstanceRenderOptions, FileCha
 import { ApplyChangeCommand } from "../../command/applyChangeCommand";
 import { Command } from "../../command/command";
 import { DebugMigrationScriptProcessCommand } from "../../command/debugMigrationScriptProcesCommand";
+import { StopDebugMigrationScriptProcessCommand } from "../../command/stopDebugMigrationScriptCommand";
 import { modules, vscCommands, vscModules } from "../../di/inversify.config";
 import { TYPES } from "../../di/types";
 import { MatchManager } from "../../migration/matchManger";
@@ -363,6 +364,13 @@ export class Scenario {
         const debugCommand = this.getCommand<DebugMigrationScriptProcessCommand>("vscode-migrate.debug-migration-script-process");
         await debugCommand.execute();
         this.log("Debugging started.");
+    }
+
+    public async stopDebugging(): Promise<void> {
+        this.log("Stopping debugging...");
+        const debugCommand = this.getCommand<StopDebugMigrationScriptProcessCommand>("vscode-migrate.stop-debug-migration-script-process");
+        await debugCommand.execute();
+        this.log("Debugging stopped.");
     }
 
     public async waitForBreakpointHit(): Promise<SourceBreakpoint> {

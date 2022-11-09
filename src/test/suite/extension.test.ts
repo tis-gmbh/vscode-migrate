@@ -218,4 +218,31 @@ suite("VSCode Migrate", () => {
         expect(stringify(breakpoint.location.uri))
             .to.equal(stringify(scenario.actualUri(".vscode/migrations/bracketMigration.ts")));
     });
+
+    test("stops migration script debugging", async () => {
+        scenario = await Scenario.load("singleFile");
+
+        const breakPointHold = scenario.waitForBreakpointHit();
+        await scenario.addBreakpoint(
+            scenario.actualUri(".vscode/migrations/bracketMigration.ts"),
+            new Position(11, 9)
+        );
+        await scenario.startDebugging();
+        const migrationStarted = scenario.startMigration("Brackets");
+
+        await breakPointHold;
+
+        await scenario.stopDebugging();
+        await migrationStarted;
+        const actualTree = await scenario.getDisplayedTree();
+        const expectedTree = {
+            "main.ts": [
+                `>>>First match<<<`,
+                `>>>Second match<<<`,
+                `>>>Third match<<<`
+            ]
+        };
+
+        expect(actualTree).to.deep.equal(expectedTree);
+    });
 });
