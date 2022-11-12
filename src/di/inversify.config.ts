@@ -6,6 +6,7 @@ import { CommandManager } from "../command/commandManager";
 import { DebugMigrationScriptProcessCommand } from "../command/debugMigrationScriptProcesCommand";
 import { StartMigrationCommand } from "../command/startMigrationCommand";
 import { StopDebugMigrationScriptProcessCommand } from "../command/stopDebugMigrationScriptCommand";
+import { StopMigrationCommand } from "../command/stopMigrationCommand";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { MigrationLoaderRemote } from "../migration/migrationLoaderRemote";
@@ -41,6 +42,7 @@ export const modules = new ContainerModule(bind => {
 export const vscCommands = new ContainerModule(bind => {
     bind(TYPES.Command).to(ApplyChangeCommand);
     bind(TYPES.Command).to(StartMigrationCommand);
+    bind(TYPES.Command).to(StopMigrationCommand);
     bind(TYPES.Command).to(DebugMigrationScriptProcessCommand);
     bind(TYPES.Command).to(StopDebugMigrationScriptProcessCommand);
 });

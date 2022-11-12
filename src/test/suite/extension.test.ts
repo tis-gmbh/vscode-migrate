@@ -167,7 +167,7 @@ suite("VSCode Migrate", () => {
         expect(actualRightUri).to.equal(expectedRightUri);
     });
 
-    test("Show identical file when match isn't found", async () => {
+    test("shows identical file when match isn't found", async () => {
         scenario = await Scenario.load("singleFile", "Brackets");
         const unchangedContent = scenario.actual("src/main.ts");
         const invalidMatchUri = toMatchUri(scenario.actualUri("src/main.ts"), "999999");
@@ -243,6 +243,16 @@ suite("VSCode Migrate", () => {
             ]
         };
 
+        expect(actualTree).to.deep.equal(expectedTree);
+    });
+
+    test("stops migration", async () => {
+        scenario = await Scenario.load("singleFile", "Brackets");
+
+        await scenario.stopMigration();
+
+        const actualTree = await scenario.getDisplayedTree();
+        const expectedTree = {};
         expect(actualTree).to.deep.equal(expectedTree);
     });
 });

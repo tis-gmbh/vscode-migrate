@@ -116,6 +116,12 @@ export class Scenario {
         await this.matchManager.ready;
     }
 
+    public async stopMigration(): Promise<void> {
+        const stopMigrationCommand = this.getCommand("vscode-migrate.stop-migration");
+        await stopMigrationCommand.execute();
+        await this.matchManager.ready;
+    }
+
     private prepareDependencies(): void {
         this.createMessageLogger("showInformationMessage");
         this.createMessageLogger("showErrorMessage");

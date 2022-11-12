@@ -117,13 +117,14 @@ export class MatchManager {
         this.readyPromise = (async (): Promise<void> => {
             this.stateEmitter.fire("updating");
             const files = await this.migrationHolder.getMatchedFiles();
-            await this.addFiles(files);
+            await this.replaceFiles(files);
             this.stateEmitter.fire("up to date");
         })();
         return this.readyPromise;
     }
 
-    private async addFiles(files: MatchedFile[]): Promise<void> {
+    private async replaceFiles(files: MatchedFile[]): Promise<void> {
+        this.matches = {};
         for (const file of files) {
             const fileUri = fsPathToFileUri(file.path);
             const path = this.getKeyByFileUri(fileUri);
@@ -143,4 +144,3 @@ export class MatchManager {
         return this.readyPromise;
     }
 }
-
