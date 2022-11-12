@@ -362,12 +362,11 @@ export class Scenario {
             const disposable = debug.registerDebugAdapterTrackerFactory("pwa-node", {
                 createDebugAdapterTracker: () => {
                     return {
-                        onDidSendMessage(message: DebugProtocol.SetBreakpointsResponse): void {
+                        onDidSendMessage(message: DebugProtocol.Response): void {
                             if (message.command === "setBreakpoints") {
                                 if (!message.success) rej("Failed to set breakpoint: " + message.message);
                                 if (!message.body) rej("Failed to set breakpoint: no body");
                                 if (!message.body.breakpoints || message.body.breakpoints.length === 0) rej("Failed to set breakpoint: no breakpoints");
-                                if (message.body.breakpoints.some(b => b.verified === false)) return;
 
                                 disposable.dispose();
                                 scenario.log(`Added breakpoint at ${fileUri.fsPath}:${position.line}`);
