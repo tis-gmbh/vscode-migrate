@@ -356,7 +356,14 @@ export class Scenario {
     public addBreakpoint(fileUri: Uri, position: SourcePosition): Promise<void> {
         this.log(`Adding breakpoint at ${fileUri.fsPath}:${position.line}`);
         return new Promise(res => {
-            const disposable = debug.onDidChangeBreakpoints(() => {
+            const disposable = debug.onDidChangeBreakpoints((e) => {
+                const matchingBreakpoints = e.added.filter(b => {
+                    if (!(b as SourceBreakpoint).location) return false;
+                    const sourceBreakpoint = b as SourceBreakpoint;
+                    return sourceBreakpoint.location.uri.fsPath === fileUri.fsPath
+                        && sourceBreakpoint.location.range.start.line === position.line;
+                });
+                if (matchingBreakpoints.length === 0) return;
                 disposable.dispose();
                 this.log(`Breakpoint added at ${fileUri.fsPath}:${position.line}`);
                 res();
