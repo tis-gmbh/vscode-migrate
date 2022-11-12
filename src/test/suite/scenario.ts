@@ -1,8 +1,9 @@
+import { DebugProtocol } from "@vscode/debugprotocol";
 import { readFileSync } from "fs";
 import { copySync, emptyDirSync } from "fs-extra";
 import { Container } from "inversify";
 import { join, resolve } from "path";
-import { commands, debug, DebugSession, DecorationInstanceRenderOptions, FileChangeType, FileSystemProvider, Location, MessageOptions, Position as SourcePosition, Range as VscRange, SourceBreakpoint, TextDocument, TreeDataProvider, TreeItem, TreeItemLabel, Uri, window } from "vscode";
+import { commands, debug, DebugAdapterTracker, DebugSession, DecorationInstanceRenderOptions, FileChangeType, FileSystemProvider, Location, MessageOptions, Position as SourcePosition, Range as VscRange, SourceBreakpoint, TextDocument, TreeDataProvider, TreeItem, TreeItemLabel, Uri, window } from "vscode";
 import { ApplyChangeCommand } from "../../command/applyChangeCommand";
 import { Command } from "../../command/command";
 import { DebugMigrationScriptProcessCommand } from "../../command/debugMigrationScriptProcesCommand";
@@ -46,7 +47,7 @@ export class Scenario {
     public readonly original = fileReaderFor(this.originalPath());
     public readonly actual = fileReaderFor(this.actualPath());
     public readonly expected = fileReaderFor(this.expectationPath());
-    private readonly logs: string[] = [];
+    private readonly logStorage = new LogStorage();
 
     public readonly container: Container;
     public readonly vsCodeMigrate: VSCodeMigrate;
@@ -162,14 +163,14 @@ export class Scenario {
         const scenario = this;
         this.container.rebind(TYPES.MigrationOutputChannel).to(class extends MigrationOutputChannel {
             public append(value: string): void {
-                scenario.logs.push("MigrationOutputChannel: " + value);
+                scenario.logStorage.log("MigrationOutputChannel: " + value);
                 super.append(value);
             }
         }).inSingletonScope();
 
         this.container.rebind(TYPES.MigrationStdOutChannel).to(class extends MigrationStdOutChannel {
             public append(value: string): void {
-                scenario.logs.push("MigrationStdOutChannel: " + value);
+                scenario.logStorage.log("MigrationStdOutChannel: " + value);
                 super.append(value);
             }
         }).inSingletonScope();
@@ -373,7 +374,13 @@ export class Scenario {
     }
 
     public async startDebugging(): Promise<void> {
+        const scenario = this;
         this.log("Starting debugging...");
+        debug.registerDebugAdapterTrackerFactory("pwa-node", {
+            createDebugAdapterTracker(session: DebugSession): DebugAdapterTracker {
+                return new LoggingDebugAdapterTracker(scenario.logStorage, session);
+            }
+        });
         const debugCommand = this.getCommand<DebugMigrationScriptProcessCommand>("vscode-migrate.debug-migration-script-process");
         await debugCommand.execute();
         this.log("Debugging started.");
@@ -415,13 +422,11 @@ export class Scenario {
     }
 
     private log(message: string): void {
-        this.logs.push("Scenario: " + message);
+        this.logStorage.log("Scenario: " + message);
     }
 
     public dumpLogs(): void {
-        for (const log of this.logs) {
-            console.log(log);
-        }
+        this.logStorage.dumpLogs();
     }
 }
 
@@ -500,4 +505,49 @@ function getHitColor(hits: number | null): string | undefined {
         return "lime";
     }
     return "red";
+}
+
+class LogStorage {
+    private readonly logs: string[] = [];
+
+    public log(message: string): void {
+        this.logs.push(message);
+    }
+
+    public dumpLogs(): void {
+        for (const log of this.logs) {
+            console.log(log);
+        }
+    }
+}
+
+class LoggingDebugAdapterTracker implements DebugAdapterTracker {
+    public constructor(
+        private readonly logStorage: LogStorage,
+        private readonly session: DebugSession
+    ) { }
+
+    private log(message: string): void {
+        this.logStorage.log("Debug Adapter Tracker: " + message);
+    }
+
+    public onWillStartSession(): void {
+        this.log("onWillStartSession");
+    }
+
+    public onWillStopSession(): void {
+        this.log("onWillStopSession");
+    }
+
+    public onWillReceiveMessage(message: DebugProtocol.Request): void {
+        this.log("Will receive request: " + JSON.stringify(message));
+    }
+
+    public onDidSendMessage(message: DebugProtocol.Response): void {
+        this.log("Sent response: " + JSON.stringify(message));
+    }
+
+    public onError(error: Error): void {
+        this.log("Error: " + error.message);
+    }
 }
