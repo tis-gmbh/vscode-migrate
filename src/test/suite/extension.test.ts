@@ -206,11 +206,12 @@ suite("VSCode Migrate", () => {
         scenario = await Scenario.load("singleFile");
 
         const breakPointHold = scenario.waitForBreakpointHit();
-        await scenario.addBreakpoint(
+        const breakPointBound = scenario.addBreakpoint(
             scenario.actualUri(".vscode/migrations/bracketMigration.ts"),
             new Position(11, 9)
         );
         await scenario.startDebugging();
+        await breakPointBound;
         void scenario.startMigration("Brackets");
 
         const breakpoint = await breakPointHold;

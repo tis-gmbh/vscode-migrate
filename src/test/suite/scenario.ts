@@ -356,18 +356,25 @@ export class Scenario {
 
     public addBreakpoint(fileUri: Uri, position: SourcePosition): Promise<void> {
         this.log(`Adding breakpoint at ${fileUri.fsPath}:${position.line}`);
-        return new Promise(res => {
-            const disposable = debug.onDidChangeBreakpoints((e) => {
-                const matchingBreakpoints = e.added.filter(b => {
-                    if (!(b as SourceBreakpoint).location) return false;
-                    const sourceBreakpoint = b as SourceBreakpoint;
-                    return sourceBreakpoint.location.uri.fsPath === fileUri.fsPath
-                        && sourceBreakpoint.location.range.start.line === position.line;
-                });
-                if (matchingBreakpoints.length === 0) return;
-                disposable.dispose();
-                this.log(`Breakpoint added at ${fileUri.fsPath}:${position.line}`);
-                res();
+
+        return new Promise((res, rej) => {
+            const scenario = this;
+            const disposable = debug.registerDebugAdapterTrackerFactory("pwa-node", {
+                createDebugAdapterTracker: () => {
+                    return {
+                        onDidSendMessage(message: DebugProtocol.Response): void {
+                            if (message.command === "setBreakpoints") {
+                                if (!message.success) rej("Failed to set breakpoint: " + message.message);
+                                if (!message.body) rej("Failed to set breakpoint: no body");
+                                if (!message.body.breakpoints || message.body.breakpoints.length === 0) rej("Failed to set breakpoint: no breakpoints");
+
+                                disposable.dispose();
+                                scenario.log(`Added breakpoint at ${fileUri.fsPath}:${position.line}`);
+                                res();
+                            }
+                        }
+                    };
+                }
             });
             debug.addBreakpoints([new SourceBreakpoint(new Location(fileUri, position))]);
         });
