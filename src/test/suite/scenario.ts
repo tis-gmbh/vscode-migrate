@@ -354,30 +354,10 @@ export class Scenario {
         });
     }
 
-    public addBreakpoint(fileUri: Uri, position: SourcePosition): Promise<void> {
+    public addBreakpoint(fileUri: Uri, position: SourcePosition): void {
         this.log(`Adding breakpoint at ${fileUri.fsPath}:${position.line}`);
-
-        return new Promise((res, rej) => {
-            const scenario = this;
-            const disposable = debug.registerDebugAdapterTrackerFactory("pwa-node", {
-                createDebugAdapterTracker: () => {
-                    return {
-                        onDidSendMessage(message: DebugProtocol.Response): void {
-                            if (message.command === "setBreakpoints") {
-                                if (!message.success) rej("Failed to set breakpoint: " + message.message);
-                                if (!message.body) rej("Failed to set breakpoint: no body");
-                                if (!message.body.breakpoints || message.body.breakpoints.length === 0) rej("Failed to set breakpoint: no breakpoints");
-
-                                disposable.dispose();
-                                scenario.log(`Added breakpoint at ${fileUri.fsPath}:${position.line}`);
-                                res();
-                            }
-                        }
-                    };
-                }
-            });
-            debug.addBreakpoints([new SourceBreakpoint(new Location(fileUri, position))]);
-        });
+        debug.addBreakpoints([new SourceBreakpoint(new Location(fileUri, position))]);
+        this.log(`Added breakpoint at ${fileUri.fsPath}:${position.line}`);
     }
 
     public async startDebugging(): Promise<void> {
