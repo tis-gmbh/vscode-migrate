@@ -56,9 +56,6 @@ const migrationScriptProcessConfig = {
         filename: "migrationScriptProcess.js",
         libraryTarget: "commonjs2"
     },
-    externals: {
-        vscode: "commonjs vscode"
-    },
     resolve: {
         // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
         extensions: [".ts", ".js"]
