@@ -25,7 +25,8 @@ export class DebugMigrationScriptProcessCommand implements Command {
             protocol: "inspector",
             skipFiles: [
                 "<node_internals>/**"
-            ]
+            ],
+            pauseForSourceMap: true
         });
     }
 }
