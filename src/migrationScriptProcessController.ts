@@ -1,6 +1,7 @@
 import { ChildProcess, fork } from "child_process";
 import { inject, injectable } from "inversify";
 import { join } from "path";
+import { EventEmitter } from "vscode";
 import { RpcProvider } from "worker-rpc";
 import { TYPES, VscWindow, VSC_TYPES } from "./di/types";
 import { MigrationOutputChannel } from "./migration/migrationOutputChannel";
@@ -13,6 +14,8 @@ type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 export class MigrationScriptProcessController {
     private rpcProvider: RpcProvider = new RpcProvider(message => this.child.send(message));
     private child = this.createChild();
+    private readonly restartEmitter = new EventEmitter<void>();
+    public readonly restartEvent = this.restartEmitter.event;
 
     public constructor(
         @inject(TYPES.MigrationStdOutChannel) private readonly migrationStdOutChannel: MigrationStdOutChannel,
@@ -38,14 +41,9 @@ export class MigrationScriptProcessController {
             this.migrationStdOutChannel.append("ERROR: " + data);
         });
         child.on("exit", (exitCode, signal) => {
-            this.migrationStdOutChannel.append(`MigrationScriptProcess died with exit code ${exitCode} and signal ${signal}. Restarting.\n`);
-            void this.window.showWarningMessage("MigrationScriptProcess died and is being restarted.", "Show Output")
-                .then(result => {
-                    if (result === "Show Output") {
-                        this.migrationStdOutChannel.show();
-                    }
-                });
+            this.announceProcessDeath(exitCode, signal);
             this.child = this.createChild();
+            this.restartEmitter.fire();
         });
         this.rpcProvider = new RpcProvider(message => this.child.send(message));
         this.rpcProvider.error.addHandler(error => {
@@ -53,6 +51,26 @@ export class MigrationScriptProcessController {
         });
         child.on("message", message => this.rpcProvider?.dispatch(message));
         return child;
+    }
+
+    private announceProcessDeath(exitCode: number | null, signal: NodeJS.Signals | null): void {
+        this.migrationStdOutChannel.append(`MigrationScriptProcess died with exit code ${exitCode} and signal ${signal}. Restarting.\n`);
+        void this.window.showWarningMessage("MigrationScriptProcess died and is being restarted.", "Show Output")
+            .then(result => {
+                if (result === "Show Output") {
+                    this.migrationStdOutChannel.show();
+                }
+            });
+    }
+
+    public restart(): Promise<void> {
+        return new Promise((res, rej) => {
+            if (this.child.kill()) {
+                res();
+            } else {
+                rej();
+            }
+        });
     }
 
     public async send<M extends RPCMethodNames>(methodName: M, ...args: Parameters<RPCInterface[M]>): Promise<UnwrapPromise<ReturnType<RPCInterface[M]>>> {

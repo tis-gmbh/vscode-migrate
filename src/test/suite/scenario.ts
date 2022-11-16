@@ -113,14 +113,39 @@ export class Scenario {
         const defaultMigration = migrations.find(migration => migration === migrationName);
         if (!defaultMigration) throw new Error("Default migration not found");
 
+        const updatePass = this.updatePass();
         await migrationHolder.start(defaultMigration);
-        await this.matchManager.ready;
+        await updatePass;
     }
 
     public async stopMigration(): Promise<void> {
         const stopMigrationCommand = this.getCommand("vscode-migrate.stop-migration");
+        const updatePass = this.updatePass();
         await stopMigrationCommand.execute();
-        await this.matchManager.ready;
+        await updatePass;
+    }
+
+    public async restartProcess(): Promise<void> {
+        const restartMigrationScriptProcessCommand = this.getCommand("vscode-migrate.restart-migration-script-process");
+        const updatePass = this.updatePass();
+        await restartMigrationScriptProcessCommand.execute();
+        await updatePass;
+    }
+
+    private async updatePass(): Promise<void> {
+        let wasUpdating = false;
+        return new Promise(resolve => {
+            const disposable = this.matchManager.onStateChange(state => {
+                const isUpdating = state === "updating";
+                if (!wasUpdating && isUpdating) {
+                    wasUpdating = true;
+                } else if (wasUpdating && !isUpdating) {
+                    disposable.dispose();
+                    resolve();
+                    return;
+                }
+            });
+        });
     }
 
     private prepareDependencies(): void {

@@ -116,7 +116,10 @@ export class MatchManager {
     private async replaceMatches(): Promise<void> {
         this.readyPromise = (async (): Promise<void> => {
             this.stateEmitter.fire("updating");
-            const files = await this.migrationHolder.getMatchedFiles();
+            let files: MatchedFile[] = [];
+            if (await this.migrationHolder.hasMigration()) {
+                files = await this.migrationHolder.getMatchedFiles();
+            }
             await this.replaceFiles(files);
             this.stateEmitter.fire("up to date");
         })();

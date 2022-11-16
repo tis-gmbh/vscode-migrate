@@ -255,4 +255,14 @@ suite("VSCode Migrate", () => {
         const expectedTree = {};
         expect(actualTree).to.deep.equal(expectedTree);
     });
+
+    test("clears migration if process is restarted", async () => {
+        scenario = await Scenario.load("singleFile", "Brackets");
+
+        await scenario.restartProcess();
+
+        const actualTree = await scenario.getDisplayedTree();
+        const expectedTree = {};
+        expect(actualTree).to.deep.equal(expectedTree);
+    });
 });

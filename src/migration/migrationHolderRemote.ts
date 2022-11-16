@@ -15,6 +15,7 @@ export class MigrationHolderRemote {
         @inject(TYPES.MigrationOutputChannel) private readonly outputChannel: MigrationOutputChannel,
         @inject(TYPES.MigrationScriptProcessController) private readonly migrationProcess: MigrationScriptProcessController
     ) {
+        this.migrationProcess.restartEvent(() => this.changeEmitter.fire());
     }
 
     public async start(migrationName: string): Promise<void> {
