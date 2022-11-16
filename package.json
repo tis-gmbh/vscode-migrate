@@ -44,7 +44,7 @@
                },
                {
                     "command": "vscode-migrate.stop-debug-migration-script-process",
-                    "title": "VSCode Migrate: Stop debugging Migration Script",
+                    "title": "VSCode Migrate: Stop Debugging Migration Script",
                     "icon": "$(bug)"
                },
                {

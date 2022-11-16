@@ -35,15 +35,16 @@ Your migration script...
 - needs to be located within the `.vscode/migration` directory of your project.
 - can be written in JavaScript or TypeScript, the later requiring [ts-node](https://www.npmjs.com/package/ts-node) to be installed.
 - can register migrations (or their sync or async factory functions) with a name using a global `registerMigration` function or `@Migration` decorator.
-- is loaded into VSCode's extension development host process, which means
-  - it can do anything, any normal VSCode Extension can do, but
-  - will block the entire extension host process if it performs long running tasks synchronously.
-- is currently only required once. If you updated it, you need to reload the window to include the changes.
+- is running in a separate process, which means
+  - it has no access to the VSCode Extension Host API, but
+  - can safely perform long running tasks without stalling the extension host process, and
+  - can be debugged 
+- is currently only required once. If you updated it, you can run the 'Restart Migration Script Process' command to load a fresh version of your migration script.
 
 Your migration...
 
 - needs to have a sync or async `getMatchedFiles` method, returning a set of file with matches. For more details on the model, check [this definition file](./src/migrationTypes.d.ts).
-- will have it's `getMatchedFiles` method only be called when the migration is started.
+- will have it's `getMatchedFiles` method only called when the migration is started.
 - does **NOT** need to update the matches or suggested changes on file changes.
 - can define a sync or async `verify` method to run verification tasks like linting or running tests before submitting a change to version control.
 - can throw an error within the verify method, if the verification tasks fail and submission to version control needs to be aborted.
