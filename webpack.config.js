@@ -8,22 +8,10 @@ const path = require("path");
 /** @typedef {import('webpack').Configuration} WebpackConfig **/
 
 /** @type WebpackConfig */
-const extensionConfig = {
-    target: "node", // vscode extensions run in a Node.js-context 📖 -> https://webpack.js.org/configuration/node/
-    mode: "none", // this leaves the source code as close as possible to the original (when packaging we set this to 'production')
-
-    entry: "./src/extension.ts", // the entry point of this extension, 📖 -> https://webpack.js.org/configuration/entry-context/
-    output: {
-        // the bundle is stored in the 'dist' folder (check package.json), 📖 -> https://webpack.js.org/configuration/output/
-        path: path.resolve(__dirname, "dist"),
-        filename: "extension.js",
-        libraryTarget: "commonjs2"
-    },
-    externals: {
-        vscode: "commonjs vscode"
-    },
+const baseConfig = {
+    target: "node",
+    mode: "none",
     resolve: {
-        // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
         extensions: [".ts", ".js"]
     },
     module: {
@@ -41,7 +29,31 @@ const extensionConfig = {
     },
     devtool: "nosources-source-map",
     infrastructureLogging: {
-        level: "log", // enables logging required for problem matchers
+        level: "log",
     },
 };
-module.exports = [extensionConfig];
+
+
+/** @type WebpackConfig */
+const extensionConfig = Object.assign({}, baseConfig, {
+    entry: "./src/extension.ts",
+    output: {
+        path: path.resolve(__dirname, "dist"),
+        filename: "extension.js",
+        libraryTarget: "commonjs2"
+    },
+    externals: {
+        vscode: "commonjs vscode"
+    }
+});
+
+const migrationScriptProcessConfig = Object.assign({}, baseConfig, {
+    entry: "./src/migrationScriptProcess.ts",
+    output: {
+        path: path.resolve(__dirname, "dist"),
+        filename: "migrationScriptProcess.js",
+        libraryTarget: "commonjs2"
+    }
+});
+
+module.exports = [extensionConfig, migrationScriptProcessConfig];

@@ -13,8 +13,6 @@ export function run(): Promise<void> {
 
     const testsRoot = path.resolve(__dirname, "..");
 
-    global.__non_webpack_require__ = require;
-
     return new Promise((c, e) => {
         glob("**/**.test.js", { cwd: testsRoot }, (err, files) => {
             if (err) {

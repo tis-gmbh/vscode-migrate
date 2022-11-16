@@ -1,13 +1,19 @@
 import { ContainerModule } from "inversify";
 import "reflect-metadata";
-import { commands, extensions, tasks, window, workspace } from "vscode";
+import { commands, debug, extensions, tasks, window, workspace } from "vscode";
 import { ApplyChangeCommand } from "../command/applyChangeCommand";
 import { CommandManager } from "../command/commandManager";
+import { DebugMigrationScriptProcessCommand } from "../command/debugMigrationScriptProcesCommand";
+import { RestartMigrationScriptProcessCommand } from "../command/restartMigrationScriptProcessCommand";
 import { StartMigrationCommand } from "../command/startMigrationCommand";
+import { StopDebugMigrationScriptProcessCommand } from "../command/stopDebugMigrationScriptCommand";
+import { StopMigrationCommand } from "../command/stopMigrationCommand";
 import { MatchManager } from "../migration/matchManger";
-import { MigrationHolder } from "../migration/migrationHolder";
-import { MigrationLoader } from "../migration/migrationLoader";
+import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
+import { MigrationLoaderRemote } from "../migration/migrationLoaderRemote";
 import { MigrationOutputChannel } from "../migration/migrationOutputChannel";
+import { MigrationStdOutChannel } from "../migration/migrationStdOutChannel";
+import { MigrationScriptProcessController } from "../migrationScriptProcessController";
 import { ChangedContentProvider } from "../providers/changedContentProvider";
 import { CoverageDecorationProvider } from "../providers/coverageDecorationProvider";
 import { QueuedMatchesProvider } from "../providers/queuedMatchesProvider";
@@ -22,19 +28,25 @@ export const modules = new ContainerModule(bind => {
     bind(TYPES.MatchManager).to(MatchManager).inSingletonScope();
     bind(TYPES.MatchesTreeProvider).to(QueuedMatchesProvider).inSingletonScope();
     bind(TYPES.ChangedContentProvider).to(ChangedContentProvider).inSingletonScope();
-    bind(TYPES.MigrationHolder).to(MigrationHolder).inSingletonScope();
-    bind(TYPES.MigrationLoader).to(MigrationLoader).inSingletonScope();
+    bind(TYPES.MigrationHolderRemote).to(MigrationHolderRemote).inSingletonScope();
+    bind(TYPES.MigrationLoaderRemote).to(MigrationLoaderRemote).inSingletonScope();
     bind(TYPES.CommandManager).to(CommandManager).inSingletonScope();
     bind(TYPES.VersionControl).to(VersionControl).inSingletonScope();
     bind(TYPES.GitExtension).to(GitExtension).inSingletonScope();
     bind(TYPES.CoverageDecorationProvider).to(CoverageDecorationProvider).inSingletonScope();
     bind(TYPES.TextDecorationConsumer).to(TextDecorationConsumer).inSingletonScope();
     bind(TYPES.MigrationOutputChannel).to(MigrationOutputChannel).inSingletonScope();
+    bind(TYPES.MigrationScriptProcessController).to(MigrationScriptProcessController).inSingletonScope();
+    bind(TYPES.MigrationStdOutChannel).to(MigrationStdOutChannel).inSingletonScope();
 });
 
 export const vscCommands = new ContainerModule(bind => {
     bind(TYPES.Command).to(ApplyChangeCommand);
     bind(TYPES.Command).to(StartMigrationCommand);
+    bind(TYPES.Command).to(StopMigrationCommand);
+    bind(TYPES.Command).to(DebugMigrationScriptProcessCommand);
+    bind(TYPES.Command).to(StopDebugMigrationScriptProcessCommand);
+    bind(TYPES.Command).to(RestartMigrationScriptProcessCommand);
 });
 
 export const vscModules = new ContainerModule(bind => {
@@ -43,4 +55,5 @@ export const vscModules = new ContainerModule(bind => {
     bind(VSC_TYPES.VscWindow).toConstantValue(window);
     bind(VSC_TYPES.VscExtensions).toConstantValue(extensions);
     bind(VSC_TYPES.VscTasks).toConstantValue(tasks);
+    bind(VSC_TYPES.VscDebug).toConstantValue(debug);
 });

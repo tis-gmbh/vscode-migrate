@@ -1,15 +1,20 @@
+import { DebugProtocol } from "@vscode/debugprotocol";
 import { readFileSync } from "fs";
 import { copySync, emptyDirSync } from "fs-extra";
 import { Container } from "inversify";
 import { join, resolve } from "path";
-import { commands, DecorationInstanceRenderOptions, FileChangeType, FileSystemProvider, MessageOptions, Range as VscRange, TextDocument, TreeDataProvider, TreeItem, TreeItemLabel, Uri, window } from "vscode";
+import { commands, debug, DebugAdapterTracker, DebugSession, DecorationInstanceRenderOptions, FileChangeType, FileSystemProvider, Location, MessageOptions, Position as SourcePosition, Range as VscRange, SourceBreakpoint, TextDocument, TreeDataProvider, TreeItem, TreeItemLabel, Uri, window } from "vscode";
 import { ApplyChangeCommand } from "../../command/applyChangeCommand";
 import { Command } from "../../command/command";
+import { DebugMigrationScriptProcessCommand } from "../../command/debugMigrationScriptProcesCommand";
+import { StopDebugMigrationScriptProcessCommand } from "../../command/stopDebugMigrationScriptCommand";
 import { modules, vscCommands, vscModules } from "../../di/inversify.config";
 import { TYPES } from "../../di/types";
 import { MatchManager } from "../../migration/matchManger";
-import { MigrationHolder } from "../../migration/migrationHolder";
-import { MigrationLoader } from "../../migration/migrationLoader";
+import { MigrationHolderRemote } from "../../migration/migrationHolderRemote";
+import { MigrationLoaderRemote } from "../../migration/migrationLoaderRemote";
+import { MigrationOutputChannel } from "../../migration/migrationOutputChannel";
+import { MigrationStdOutChannel } from "../../migration/migrationStdOutChannel";
 import { fsPathToFileUri, stringify, toFileUri } from "../../utils/uri";
 import { API, Change, Repository, Status } from "../../vcs/git";
 import { GitExtension } from "../../vcs/gitExtension";
@@ -42,8 +47,9 @@ export class Scenario {
     public readonly original = fileReaderFor(this.originalPath());
     public readonly actual = fileReaderFor(this.actualPath());
     public readonly expected = fileReaderFor(this.expectationPath());
+    private readonly logStorage = new LogStorage();
 
-    private readonly container: Container;
+    public readonly container: Container;
     public readonly vsCodeMigrate: VSCodeMigrate;
     private readonly matchManager: MatchManager;
     private readonly treeProvider: TreeDataProvider<string>;
@@ -87,24 +93,59 @@ export class Scenario {
         if (this.contentProvider.onDidChangeFile) {
             this.contentProvider.onDidChangeFile((...args) => this.contentUpdates.push(args));
         }
+
+        debug.removeBreakpoints(debug.breakpoints);
     }
 
-    public static async load(name: string, migrationName: string): Promise<Scenario> {
+    public static async load(name: string, migrationName?: string): Promise<Scenario> {
         const scenario = new Scenario(name);
-        await scenario.startMigration(migrationName);
+        if (migrationName) {
+            await scenario.startMigration(migrationName);
+        }
         return scenario;
     }
 
-    private async startMigration(migrationName: string): Promise<void> {
-        const migrationLoader = this.container.get<MigrationLoader>(TYPES.MigrationLoader);
-        const migrationHolder = this.container.get<MigrationHolder>(TYPES.MigrationHolder);
+    public async startMigration(migrationName: string): Promise<void> {
+        const migrationLoader = this.container.get<MigrationLoaderRemote>(TYPES.MigrationLoaderRemote);
+        const migrationHolder = this.container.get<MigrationHolderRemote>(TYPES.MigrationHolderRemote);
         await migrationLoader.refresh();
-        const migrations = migrationLoader.getNames();
+        const migrations = await migrationLoader.getNames();
         const defaultMigration = migrations.find(migration => migration === migrationName);
         if (!defaultMigration) throw new Error("Default migration not found");
 
+        const updatePass = this.updatePass();
         await migrationHolder.start(defaultMigration);
-        await this.matchManager.ready;
+        await updatePass;
+    }
+
+    public async stopMigration(): Promise<void> {
+        const stopMigrationCommand = this.getCommand("vscode-migrate.stop-migration");
+        const updatePass = this.updatePass();
+        await stopMigrationCommand.execute();
+        await updatePass;
+    }
+
+    public async restartProcess(): Promise<void> {
+        const restartMigrationScriptProcessCommand = this.getCommand("vscode-migrate.restart-migration-script-process");
+        const updatePass = this.updatePass();
+        await restartMigrationScriptProcessCommand.execute();
+        await updatePass;
+    }
+
+    private async updatePass(): Promise<void> {
+        let wasUpdating = false;
+        return new Promise(resolve => {
+            const disposable = this.matchManager.onStateChange(state => {
+                const isUpdating = state === "updating";
+                if (!wasUpdating && isUpdating) {
+                    wasUpdating = true;
+                } else if (wasUpdating && !isUpdating) {
+                    disposable.dispose();
+                    resolve();
+                    return;
+                }
+            });
+        });
     }
 
     private prepareDependencies(): void {
@@ -112,6 +153,7 @@ export class Scenario {
         this.createMessageLogger("showErrorMessage");
         this.createMessageLogger("showWarningMessage");
         this.createCommandsLogger();
+        this.createOutputLogger();
         this.rebindGitExtension();
     }
 
@@ -140,6 +182,23 @@ export class Scenario {
             });
             return result;
         };
+    }
+
+    private createOutputLogger(): void {
+        const scenario = this;
+        this.container.rebind(TYPES.MigrationOutputChannel).to(class extends MigrationOutputChannel {
+            public append(value: string): void {
+                scenario.logStorage.log("MigrationOutputChannel: " + value);
+                super.append(value);
+            }
+        }).inSingletonScope();
+
+        this.container.rebind(TYPES.MigrationStdOutChannel).to(class extends MigrationStdOutChannel {
+            public append(value: string): void {
+                scenario.logStorage.log("MigrationStdOutChannel: " + value);
+                super.append(value);
+            }
+        }).inSingletonScope();
     }
 
     private rebindGitExtension(): void {
@@ -240,7 +299,7 @@ export class Scenario {
     }
 
     public async getTreeItemsOf(treeElement: string): Promise<TreeItem[]> {
-        const children = await this.treeProvider.getChildren(treeElement) || [];
+        const children = (await this.treeProvider.getChildren(treeElement)) || [];
         return Promise.all(children.map(c => this.treeProvider.getTreeItem(c)));
     }
 
@@ -251,17 +310,18 @@ export class Scenario {
     public async applyChangesFor(matchUri: Uri): Promise<void> {
         const applyChangeCommand = this.getCommand<ApplyChangeCommand>("vscode-migrate.apply-change");
         this.setModified(toFileUri(matchUri));
-        await applyChangeCommand?.execute(matchUri);
+        await applyChangeCommand.execute(matchUri);
     }
 
-    public getCommand<T extends Command>(id: string): T | undefined {
+    public getCommand<T extends Command>(id: string): T {
         return this.container
             .getAll<T>(TYPES.Command)
-            .find(command => command.id === id);
+            .find(command => command.id === id)!;
     }
 
     public async applyAllFor(fileUri: Uri): Promise<void> {
         let currentMatches = this.matchManager.getMatchUrisByFileUri(fileUri);
+        this.log(`Applying all ${currentMatches.length} changes for ${fileUri.fsPath}`);
         while (true) {
             const nextMatch = currentMatches[0];
             if (!nextMatch) break;
@@ -270,6 +330,7 @@ export class Scenario {
             if (currentMatches.length <= newMatches.length) throw new Error(`Stuck at applying ${newMatches.length} matches.`);
             currentMatches = newMatches;
         }
+        this.log(`Applied all ${currentMatches.length} changes for ${fileUri.fsPath}`);
     }
 
     public async getChangedContentFor(matchUri: Uri): Promise<string> {
@@ -287,6 +348,7 @@ export class Scenario {
                     stringify(file.uri) === stringifiedUri
                     && file.type === FileChangeType.Changed
                 )) {
+                    this.log(`File ${stringifiedUri} received an update.`);
                     res();
                 }
             });
@@ -294,12 +356,14 @@ export class Scenario {
     }
 
     public async modifyContent(matchUri: Uri, callback: (originalContent: string) => string): Promise<void> {
+        this.log(`Modifying content of ${matchUri}`);
         const originalBuffer = await this.contentProvider.readFile(matchUri);
         this.contentProvider.watch(matchUri, { recursive: false, excludes: [] });
         const originalContent = originalBuffer.toString();
         const newContent = callback(originalContent);
         const buffer = Buffer.from(newContent);
         await this.contentProvider.writeFile(matchUri, buffer, { create: false, overwrite: true });
+        this.log(`Modified content of ${matchUri}`);
     }
 
     public async getDecorationsFor(fileUri: Uri): Promise<Decoration[]> {
@@ -313,6 +377,68 @@ export class Scenario {
                 options: decoration.renderOptions
             };
         });
+    }
+
+    public addBreakpoint(fileUri: Uri, position: SourcePosition): void {
+        this.log(`Adding breakpoint at ${fileUri.fsPath}:${position.line}`);
+        debug.addBreakpoints([new SourceBreakpoint(new Location(fileUri, position))]);
+        this.log(`Added breakpoint at ${fileUri.fsPath}:${position.line}`);
+    }
+
+    public async startDebugging(): Promise<void> {
+        const scenario = this;
+        this.log("Starting debugging...");
+        debug.registerDebugAdapterTrackerFactory("pwa-node", {
+            createDebugAdapterTracker(session: DebugSession): DebugAdapterTracker {
+                return new LoggingDebugAdapterTracker(scenario.logStorage, session);
+            }
+        });
+        const debugCommand = this.getCommand<DebugMigrationScriptProcessCommand>("vscode-migrate.debug-migration-script-process");
+        await debugCommand.execute();
+        this.log("Debugging started.");
+    }
+
+    public async stopDebugging(): Promise<void> {
+        this.log("Stopping debugging...");
+        const debugCommand = this.getCommand<StopDebugMigrationScriptProcessCommand>("vscode-migrate.stop-debug-migration-script-process");
+        await debugCommand.execute();
+        this.log("Debugging stopped.");
+    }
+
+    public async waitForBreakpointHit(): Promise<SourceBreakpoint> {
+        const scenario = this;
+        return new Promise(res => {
+            debug.registerDebugAdapterTrackerFactory("pwa-node", {
+                createDebugAdapterTracker(session: DebugSession) {
+                    return {
+                        async onDidSendMessage(message: any): Promise<void> {
+                            if (message.type === "event"
+                                && message.event === "stopped"
+                                && message.body.reason === "breakpoint") {
+                                const breakpointId = message.body.hitBreakpointIds[0];
+                                const mappedBreakpoints = await Promise.all(debug.breakpoints.map(async breakpoint =>
+                                    session.getDebugProtocolBreakpoint(breakpoint)
+                                ));
+                                const breakpointIndex = mappedBreakpoints.findIndex(breakpoint =>
+                                    (breakpoint as any)?.id === breakpointId
+                                );
+                                const hitBreakpoint = debug.breakpoints[breakpointIndex] as SourceBreakpoint;
+                                scenario.log("Hit breakpoint at " + stringify(hitBreakpoint.location.uri) + ":" + hitBreakpoint.location.range.start.line);
+                                res(hitBreakpoint);
+                            }
+                        }
+                    };
+                }
+            });
+        });
+    }
+
+    private log(message: string): void {
+        this.logStorage.log("Scenario: " + message);
+    }
+
+    public dumpLogs(): void {
+        this.logStorage.dumpLogs();
     }
 }
 
@@ -391,4 +517,49 @@ function getHitColor(hits: number | null): string | undefined {
         return "lime";
     }
     return "red";
+}
+
+class LogStorage {
+    private readonly logs: string[] = [];
+
+    public log(message: string): void {
+        this.logs.push(message);
+    }
+
+    public dumpLogs(): void {
+        for (const log of this.logs) {
+            console.log(log);
+        }
+    }
+}
+
+class LoggingDebugAdapterTracker implements DebugAdapterTracker {
+    public constructor(
+        private readonly logStorage: LogStorage,
+        private readonly session: DebugSession
+    ) { }
+
+    private log(message: string): void {
+        this.logStorage.log("Debug Adapter Tracker: " + message);
+    }
+
+    public onWillStartSession(): void {
+        this.log("onWillStartSession");
+    }
+
+    public onWillStopSession(): void {
+        this.log("onWillStopSession");
+    }
+
+    public onWillReceiveMessage(message: DebugProtocol.Request): void {
+        this.log("Will receive request: " + JSON.stringify(message));
+    }
+
+    public onDidSendMessage(message: DebugProtocol.Response): void {
+        this.log("Sent response: " + JSON.stringify(message));
+    }
+
+    public onError(error: Error): void {
+        this.log("Error: " + error.message);
+    }
 }

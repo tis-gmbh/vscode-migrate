@@ -2,8 +2,8 @@ import { inject, injectable } from "inversify";
 import { ProgressLocation } from "vscode";
 import { TYPES, VscCommands, VscWindow, VSC_TYPES } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
-import { MigrationHolder } from "../migration/migrationHolder";
-import { MigrationLoader } from "../migration/migrationLoader";
+import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
+import { MigrationLoaderRemote } from "../migration/migrationLoaderRemote";
 import { tick } from "../utils/tick";
 import { Command } from "./command";
 
@@ -15,8 +15,8 @@ export class StartMigrationCommand implements Command {
     public constructor(
         @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow,
         @inject(VSC_TYPES.VscCommands) private readonly commands: VscCommands,
-        @inject(TYPES.MigrationHolder) private readonly migrationHolder: MigrationHolder,
-        @inject(TYPES.MigrationLoader) private readonly migrationLoader: MigrationLoader,
+        @inject(TYPES.MigrationHolderRemote) private readonly migrationHolder: MigrationHolderRemote,
+        @inject(TYPES.MigrationLoaderRemote) private readonly migrationLoader: MigrationLoaderRemote,
         @inject(TYPES.MatchManager) private readonly matchManager: MatchManager
     ) { }
 
@@ -24,7 +24,9 @@ export class StartMigrationCommand implements Command {
         if (StartMigrationCommand.isRunning) return;
         StartMigrationCommand.isRunning = true;
 
-        await this.startMigration();
+        try {
+            await this.startMigration();
+        } catch (ignore) { }
 
         StartMigrationCommand.isRunning = false;
     }
@@ -51,7 +53,7 @@ export class StartMigrationCommand implements Command {
 
     private async selectMigration(): Promise<string | undefined> {
         await this.migrationLoader.refresh();
-        const availableMigrations = this.migrationLoader.getNames();
+        const availableMigrations = await this.migrationLoader.getNames();
         return this.window.showQuickPick(
             availableMigrations.map(migration => migration)
         );

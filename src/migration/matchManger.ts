@@ -4,7 +4,7 @@ import { EventEmitter, Uri } from "vscode";
 import { TYPES, VscWorkspace, VSC_TYPES } from "../di/types";
 import { Match, MatchedFile } from "../migrationTypes";
 import { fsPathToFileUri, getMatchId, parse, stringify, toFileUri, toMatchUri } from "../utils/uri";
-import { MigrationHolder } from "./migrationHolder";
+import { MigrationHolderRemote } from "./migrationHolderRemote";
 
 export type MatchEntry = {
     match: Match;
@@ -25,7 +25,7 @@ export class MatchManager {
     private readyPromise = Promise.resolve();
 
     public constructor(
-        @inject(TYPES.MigrationHolder) private readonly migrationHolder: MigrationHolder,
+        @inject(TYPES.MigrationHolderRemote) private readonly migrationHolder: MigrationHolderRemote,
         @inject(VSC_TYPES.VscWorkspace) private readonly workspace: VscWorkspace,
     ) {
         migrationHolder.migrationChanged(() => this.replaceMatches());
@@ -116,14 +116,18 @@ export class MatchManager {
     private async replaceMatches(): Promise<void> {
         this.readyPromise = (async (): Promise<void> => {
             this.stateEmitter.fire("updating");
-            const files = await this.migrationHolder.getMatchedFiles();
-            await this.addFiles(files);
+            let files: MatchedFile[] = [];
+            if (await this.migrationHolder.hasMigration()) {
+                files = await this.migrationHolder.getMatchedFiles();
+            }
+            await this.replaceFiles(files);
             this.stateEmitter.fire("up to date");
         })();
         return this.readyPromise;
     }
 
-    private async addFiles(files: MatchedFile[]): Promise<void> {
+    private async replaceFiles(files: MatchedFile[]): Promise<void> {
+        this.matches = {};
         for (const file of files) {
             const fileUri = fsPathToFileUri(file.path);
             const path = this.getKeyByFileUri(fileUri);
@@ -143,4 +147,3 @@ export class MatchManager {
         return this.readyPromise;
     }
 }
-

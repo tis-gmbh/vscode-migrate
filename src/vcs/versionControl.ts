@@ -2,7 +2,7 @@ import { inject, injectable } from "inversify";
 import { Uri } from "vscode";
 import { TYPES, VscWorkspace, VSC_TYPES } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
-import { MigrationHolder } from "../migration/migrationHolder";
+import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { toFileUri } from "../utils/uri";
 import { API, Repository } from "./git";
 import { GitExtension } from "./gitExtension";
@@ -13,7 +13,7 @@ export class VersionControl {
 
     public constructor(
         @inject(TYPES.MatchManager) private readonly matchManager: MatchManager,
-        @inject(TYPES.MigrationHolder) private readonly migrationHolder: MigrationHolder,
+        @inject(TYPES.MigrationHolderRemote) private readonly migrationHolder: MigrationHolderRemote,
         @inject(TYPES.GitExtension) private readonly gitExtension: GitExtension,
         @inject(VSC_TYPES.VscWorkspace) private readonly workspace: VscWorkspace,
     ) { }
@@ -52,12 +52,12 @@ export class VersionControl {
             matchLabel: match.match.label,
         });
 
-        return commitMessage || this.getDefaultMessageFor(matchUri);
+        return commitMessage || await this.getDefaultMessageFor(matchUri);
     }
 
-    private getDefaultMessageFor(matchUri: Uri): string {
+    private async getDefaultMessageFor(matchUri: Uri): Promise<string> {
         const match = this.matchManager.byMatchUriOrThrow(matchUri);
-        const migration = this.migrationHolder.getName();
+        const migration = await this.migrationHolder.getName();
         const relativePath = this.workspace.asRelativePath(toFileUri(matchUri));
 
         return `(Auto) Migration '${migration}' for '${relativePath}' labeled '${match.match.label}'`;

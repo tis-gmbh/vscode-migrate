@@ -1,7 +1,6 @@
 import { readFileSync } from "fs";
 import * as glob from "glob";
-import { join } from "path";
-import { workspace } from "vscode";
+import { join, relative, resolve } from "path";
 import { CommitInfo, IMigration, Match, MatchedFile } from "./migrationTypes";
 
 @Migration({
@@ -39,7 +38,8 @@ class BracketMigration implements IMigration {
     }
 
     public getCommitMessage(commitInfo: CommitInfo): string {
-        const relativePath = workspace.asRelativePath(commitInfo.filePath);
-        return `Migration 'Brackets - Custom Commit Message' for '${relativePath}' labeled '${commitInfo.matchLabel}' but the commit message is custom`
+        const relativePath = relative(resolve(__dirname, "../.."), commitInfo.filePath);
+        const normalizedPath = relativePath.replace(/\\/g, "/");
+        return `Migration 'Brackets - Custom Commit Message' for '${normalizedPath}' labeled '${commitInfo.matchLabel}' but the commit message is custom`
     }
 }
