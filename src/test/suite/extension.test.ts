@@ -1,12 +1,15 @@
-import { expect } from "chai";
+import { config, expect } from "chai";
 import { Position, Range } from "vscode";
 import { fileUriToFsPath, stringify, toFileUri, toMatchUri } from "../../utils/uri";
 import { createCoverageScheme, Scenario } from "./scenario";
 
+config.truncateThreshold = 0;
+
 suite("VSCode Migrate", () => {
     let scenario: Scenario;
 
-    teardown(function () {
+    teardown(async function () {
+        await scenario?.killProcess();
         if (this.currentTest?.state === "failed") {
             scenario?.dumpLogs();
         }
@@ -191,26 +194,28 @@ suite("VSCode Migrate", () => {
     test("commits all modified and untracked files", async () => {
         scenario = await Scenario.load("twoFile", "Brackets");
         const firstMatch = scenario.getFirstMatch();
+        const secondUri = scenario.actualUri("src/secondFile.ts");
+        const thirdUri = scenario.actualUri("src/newlyAddedFile.ts");
 
-        scenario.setModified(scenario.actualUri("src/secondFile.ts"));
-        scenario.setUntracked(scenario.actualUri("src/newlyAddedFile.ts"));
+        scenario.setModified(secondUri);
+        scenario.setUntracked(thirdUri);
 
         await scenario.applyChangesFor(firstMatch);
 
         expect(scenario.stagedPaths[0]).to.contain(fileUriToFsPath(toFileUri(firstMatch)));
-        expect(scenario.stagedPaths[0]).to.contain(scenario.actualPath("src/secondFile.ts"));
-        expect(scenario.stagedPaths[0]).to.contain(scenario.actualPath("src/newlyAddedFile.ts"));
+        expect(scenario.stagedPaths[0]).to.contain(fileUriToFsPath(secondUri));
+        expect(scenario.stagedPaths[0]).to.contain(fileUriToFsPath(thirdUri));
     });
 
     test("debugs migration script process", async () => {
         scenario = await Scenario.load("singleFile");
 
+        await scenario.startDebugging();
         const breakPointHold = scenario.waitForBreakpointHit();
         scenario.addBreakpoint(
             scenario.actualUri(".vscode/migrations/bracketMigration.ts"),
             new Position(11, 9)
         );
-        await scenario.startDebugging();
         void scenario.startMigration("Brackets");
 
         const breakpoint = await breakPointHold;

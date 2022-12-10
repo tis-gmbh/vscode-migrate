@@ -5,6 +5,7 @@ on: push
 jobs:
   compile_and_lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -17,6 +18,7 @@ jobs:
       - run: npm run lint
   test:
     needs: compile_and_lint
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -31,7 +33,13 @@ jobs:
           node-version: 16.x
           cache: "npm"
       - run: npm install
-      - run: xvfb-run -a npm test
-        if: runner.os == 'Linux'
       - run: npm test
         if: runner.os != 'Linux'
+      - run: xvfb-run -a npm run testWithCoverage
+        if: runner.os == 'Linux'
+      - name: Coverage report
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/lcov-report

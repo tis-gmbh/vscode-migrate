@@ -41,9 +41,11 @@ export class MigrationScriptProcessController {
             this.migrationStdOutChannel.append("ERROR: " + data);
         });
         child.on("exit", (exitCode, signal) => {
-            this.announceProcessDeath(exitCode, signal);
-            this.child = this.createChild();
-            this.restartEmitter.fire();
+            setTimeout(() => {
+                this.announceProcessDeath(exitCode, signal);
+                this.child = this.createChild();
+                this.restartEmitter.fire();
+            }, 100);
         });
         this.rpcProvider = new RpcProvider(message => this.child.send(message));
         this.rpcProvider.error.addHandler(error => {

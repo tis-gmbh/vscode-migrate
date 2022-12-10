@@ -35,8 +35,9 @@
                "label": "tasks: watch-tests",
                "dependsOn": [
                     "tasks: create-test-workspace",
+                    "tasks: create-cover-config",
                     "npm: watch",
-                    "npm: watch-tests"
+                    "npm: watch-tests",
                ],
                "problemMatcher": []
           },
@@ -60,6 +61,27 @@
                     "showReuseMessage": false,
                     "clear": true
                }
-          }
+          },
+          {
+               "label": "tasks: create-cover-config",
+               "type": "shell",
+               "linux": {
+                    "command": "mkdir -p out && echo \"{\\\"enabled\\\": false}\" > ./out/coverConfig.json"
+               },
+               "osx": {
+                    "command": "mkdir -p out && echo \"{\\\"enabled\\\": false}\" > ./out/coverConfig.json"
+               },
+               "windows": {
+                    "command": "mkdir -f out &&  echo \"{\\\"enabled\\\": false}\" > ./out/coverConfig.json"
+               },
+               "presentation": {
+                    "echo": true,
+                    "reveal": "never",
+                    "focus": false,
+                    "panel": "shared",
+                    "showReuseMessage": false,
+                    "clear": true
+               }
+          },
      ]
 }

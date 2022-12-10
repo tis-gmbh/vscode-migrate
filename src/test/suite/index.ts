@@ -2,7 +2,43 @@ import * as glob from "glob";
 import * as Mocha from "mocha";
 import * as path from "path";
 
-export function run(): Promise<void> {
+async function setupCoverage(): Promise<any> {
+    const nycConfig = {
+        all: false,
+        cwd: path.resolve(__dirname, "..", ".."),
+        exclude: ["**/test/**", ".vscode-test/**", "**/**.test.*s"],
+        instrument: true,
+        hookRequire: true,
+        hookRunInContext: true,
+        hookRunInThisContext: true,
+        reporter: ["text", "html", "lcov", "json-summary"],
+        reportDir: path.resolve(__dirname, "..", "..", "..", "coverage"),
+        useSpawnWrap: true
+    };
+
+    const sw = require("spawn-wrap");
+    const wrapper = require.resolve("./wrap.js");
+    sw([wrapper], {
+        NYC_CONFIG: JSON.stringify(nycConfig),
+        NYC_CWD: process.cwd()
+    });
+
+    const NYC = require("nyc");
+    const nyc = new NYC(nycConfig);
+
+    await nyc.reset().catch(() => { });
+    nyc.wrap();
+
+    return nyc;
+}
+
+export async function run(): Promise<void> {
+    let nyc: any;
+
+    if (process.env.COVERAGE) {
+        nyc = await setupCoverage();
+    }
+
     // Create the mocha test
     const mocha = new Mocha({
         ui: "tdd",
@@ -13,28 +49,26 @@ export function run(): Promise<void> {
 
     const testsRoot = path.resolve(__dirname, "..");
 
-    return new Promise((c, e) => {
-        glob("**/**.test.js", { cwd: testsRoot }, (err, files) => {
-            if (err) {
-                return e(err);
-            }
+    for (const file of glob.sync("**/**.test.js", { cwd: testsRoot })) {
+        mocha.addFile(path.resolve(testsRoot, file));
+    }
 
-            // Add files to the test suite
-            files.forEach(f => mocha.addFile(path.resolve(testsRoot, f)));
-
-            try {
-                // Run the mocha test
-                mocha.run(failures => {
-                    if (failures > 0) {
-                        e(new Error(`${failures} tests failed.`));
-                    } else {
-                        c();
-                    }
-                });
-            } catch (err) {
-                console.error(err);
-                e(err);
-            }
+    try {
+        await new Promise((resolve, reject) => {
+            mocha.run((failures) => {
+                failures > 0
+                    ? reject(new Error(`${failures} tests failed.`))
+                    : resolve(undefined);
+            });
         });
-    });
+    } catch (err) {
+        console.error(err);
+        throw err;
+    } finally {
+        console.log("Done running tests");
+        if (nyc) {
+            nyc.writeCoverageFile();
+            await nyc.report();
+        }
+    }
 }
