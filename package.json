@@ -93,9 +93,11 @@
           "package": "webpack --mode production --devtool hidden-source-map",
           "compile-tests": "tsc -p . --outDir out",
           "watch-tests": "tsc -p . -w --outDir out",
-          "pretest": "npm run compile-tests",
           "lint": "eslint src --ext ts",
-          "test": "node ./out/test/runTest.js"
+          "pretest": "npm run compile-tests",
+          "test": "node ./out/test/runTest.js",
+          "pretestWithCoverage": "npm run compile-tests",
+          "testWithCoverage": "COVERAGE=1 node ./out/test/runTest.js --coverage"
      },
      "devDependencies": {
           "@types/chai": "^4.3.4",
@@ -132,6 +134,7 @@
           "inversify": "^6.0.1",
           "lcov-parse": "^1.0.0",
           "matched": "^5.0.1",
+          "nyc": "^15.1.0",
           "reflect-metadata": "^0.1.13",
           "worker-rpc": "^0.2.0"
      }

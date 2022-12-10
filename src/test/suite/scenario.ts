@@ -15,6 +15,7 @@ import { MigrationHolderRemote } from "../../migration/migrationHolderRemote";
 import { MigrationLoaderRemote } from "../../migration/migrationLoaderRemote";
 import { MigrationOutputChannel } from "../../migration/migrationOutputChannel";
 import { MigrationStdOutChannel } from "../../migration/migrationStdOutChannel";
+import { MigrationScriptProcessController } from "../../migrationScriptProcessController";
 import { fsPathToFileUri, stringify, toFileUri } from "../../utils/uri";
 import { API, Change, Repository, Status } from "../../vcs/git";
 import { GitExtension } from "../../vcs/gitExtension";
@@ -431,6 +432,11 @@ export class Scenario {
                 }
             });
         });
+    }
+
+    public async killProcess(): Promise<void> {
+        const migrationScriptProcessController = this.container.get<MigrationScriptProcessController>(TYPES.MigrationScriptProcessController);
+        await migrationScriptProcessController.restart();
     }
 
     private log(message: string): void {

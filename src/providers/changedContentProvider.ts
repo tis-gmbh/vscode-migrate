@@ -3,7 +3,7 @@ import { inject, injectable } from "inversify";
 import { Disposable, Event, EventEmitter, FileChangeEvent, FileChangeType, FileStat, FileSystemProvider, FileType, RelativePattern, Uri } from "vscode";
 import { TYPES, VscWindow, VscWorkspace, VSC_TYPES } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
-import { MigrationHolder } from "../migration/migrationHolder";
+import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { stringify, toFileUri } from "../utils/uri";
 
 @injectable()
@@ -17,7 +17,7 @@ export class ChangedContentProvider implements FileSystemProvider {
         @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow,
         @inject(VSC_TYPES.VscWorkspace) private readonly workspace: VscWorkspace,
         @inject(TYPES.MatchManager) private readonly matchManager: MatchManager,
-        @inject(TYPES.MigrationHolderRemote) private readonly migrationHolder: MigrationHolder
+        @inject(TYPES.MigrationHolderRemote) private readonly migrationHolder: MigrationHolderRemote
     ) { }
 
     public watch(uri: Uri, _options: { readonly recursive: boolean; readonly excludes: readonly string[] }): Disposable {

@@ -5,3 +5,5 @@ node_modules
 *.vsix
 src/test/fixtures/_testWorkspace
 todo.md
+coverage
+.nyc_output
