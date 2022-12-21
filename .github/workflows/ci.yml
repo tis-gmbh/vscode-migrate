@@ -43,3 +43,9 @@ jobs:
         with:
           name: coverage-report
           path: coverage/lcov-report
+      - name: Logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: logs
+          path: logs/

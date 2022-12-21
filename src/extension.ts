@@ -1,5 +1,5 @@
 import { Container } from "inversify";
-import { debug, ExtensionContext, Location, Position, SourceBreakpoint, Uri, workspace } from "vscode";
+import { ExtensionContext } from "vscode";
 import { modules, vscCommands, vscModules } from "./di/inversify.config";
 import { TYPES } from "./di/types";
 import { VSCodeMigrate } from "./vscodeMigrate";

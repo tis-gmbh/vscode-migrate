@@ -21,14 +21,9 @@ export class StartMigrationCommand implements Command {
     ) { }
 
     public async execute(): Promise<void> {
-        if (StartMigrationCommand.isRunning) return;
-        StartMigrationCommand.isRunning = true;
-
         try {
             await this.startMigration();
         } catch (ignore) { }
-
-        StartMigrationCommand.isRunning = false;
     }
 
     private async startMigration(): Promise<void> {

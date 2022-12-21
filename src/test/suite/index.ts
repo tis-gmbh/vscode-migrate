@@ -1,6 +1,16 @@
+import { config as chaiConfig } from "chai";
 import * as glob from "glob";
 import * as Mocha from "mocha";
 import * as path from "path";
+import { Scenario } from "./scenario";
+
+declare global {
+    var scenario: Scenario;
+}
+
+declare module globalThis {
+    var scenario: Scenario;
+}
 
 async function setupCoverage(): Promise<any> {
     const nycConfig = {
@@ -47,7 +57,11 @@ export async function run(): Promise<void> {
         slow: 4000
     });
 
+    chaiConfig.truncateThreshold = 0;
+    globalThis.scenario = undefined as any as Scenario;
+
     const testsRoot = path.resolve(__dirname, "..");
+    mocha.addFile(path.resolve(testsRoot, "suite/setup.js"));
 
     for (const file of glob.sync("**/**.test.js", { cwd: testsRoot })) {
         mocha.addFile(path.resolve(testsRoot, file));

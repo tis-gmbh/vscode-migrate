@@ -1,6 +1,6 @@
 import { ContainerModule } from "inversify";
 import "reflect-metadata";
-import { commands, debug, extensions, tasks, window, workspace } from "vscode";
+import { commands, debug, extensions, window, workspace } from "vscode";
 import { ApplyChangeCommand } from "../command/applyChangeCommand";
 import { CommandManager } from "../command/commandManager";
 import { DebugMigrationScriptProcessCommand } from "../command/debugMigrationScriptProcesCommand";
@@ -54,6 +54,5 @@ export const vscModules = new ContainerModule(bind => {
     bind(VSC_TYPES.VscWorkspace).toConstantValue(workspace);
     bind(VSC_TYPES.VscWindow).toConstantValue(window);
     bind(VSC_TYPES.VscExtensions).toConstantValue(extensions);
-    bind(VSC_TYPES.VscTasks).toConstantValue(tasks);
     bind(VSC_TYPES.VscDebug).toConstantValue(debug);
 });
