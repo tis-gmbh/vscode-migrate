@@ -38,19 +38,19 @@
                     "icon": "$(run)"
                },
                {
+                    "command": "vscode-migrate.stop-migration",
+                    "title": "VSCode Migrate: Stop Migration",
+                    "icon": "$(stop)"
+               },
+               {
                     "command": "vscode-migrate.debug-migration-script-process",
                     "title": "VSCode Migrate: Debug Migration Script",
                     "icon": "$(bug)"
                },
                {
-                    "command": "vscode-migrate.stop-debug-migration-script-process",
-                    "title": "VSCode Migrate: Stop Debugging Migration Script",
-                    "icon": "$(bug)"
-               },
-               {
-                    "command": "vscode-migrate.restart-migration-script-process",
-                    "title": "VSCode Migrate: Restart Migration Script Process",
-                    "icon": "$(debug-restart)"
+                    "command": "vscode-migrate.kill-migration-script-process",
+                    "title": "VSCode Migrate: Kill Migration Script Process",
+                    "icon": "$(close)"
                }
           ],
           "menus": {
@@ -101,6 +101,7 @@
      },
      "devDependencies": {
           "@types/chai": "^4.3.4",
+          "@types/chai-as-promised": "^7.1.5",
           "@types/diff": "^5.0.2",
           "@types/fs-extra": "^9.0.13",
           "@types/glob": "^8.0.0",
@@ -116,6 +117,7 @@
           "@vscode/debugprotocol": "^1.58.0",
           "@vscode/test-electron": "^2.2.0",
           "chai": "^4.3.7",
+          "chai-as-promised": "^7.1.1",
           "eol": "^0.9.1",
           "eslint": "^8.27.0",
           "fs-extra": "^10.1.0",

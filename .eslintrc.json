@@ -48,7 +48,8 @@
             {
                 "allowTemplateLiterals": true
             }
-        ]
+        ],
+        "no-console": "warn"
     },
     "ignorePatterns": [
         "out",

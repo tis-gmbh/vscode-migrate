@@ -8,7 +8,7 @@ import { Scenario } from "./scenario";
 
 suite("Editor", () => {
     test("generates the change", async () => {
-        await Scenario.load("singleFile", "Brackets");
+        await scenario.load("singleFile", "Brackets");
         const firstMatch = getFirstMatch()!;
         const expectedNewContent = expected("src/main.ts");
 
@@ -18,7 +18,7 @@ suite("Editor", () => {
     });
 
     test("generates code coverage decorations", async () => {
-        await Scenario.load("singleFile", "Brackets");
+        await scenario.load("singleFile", "Brackets");
 
         const decorations = await getDecorationsFor(actualUri("src/main.ts"));
 
@@ -39,7 +39,7 @@ suite("Editor", () => {
     });
 
     test("updates content when another change was applied", async () => {
-        await Scenario.load("applyWhileEdit", "Brackets");
+        await scenario.load("applyWhileEdit", "Brackets");
         const secondMatch = getNthMatchUriOf(actualUri("src/main.ts"), 2);
         await getChangedContentFor(secondMatch);
 
@@ -53,7 +53,7 @@ suite("Editor", () => {
     });
 
     test("merges manual modifications with updates from disk", async () => {
-        await Scenario.load("manualMerge", "Brackets");
+        await scenario.load("manualMerge", "Brackets");
         const secondMatch = getNthMatchUriOf(actualUri("src/main.ts"), 2);
         await modifyContent(secondMatch, original => original.replace(
             "No match", "manual modification"
@@ -69,7 +69,7 @@ suite("Editor", () => {
     });
 
     test("shows identical file when match isn't found", async () => {
-        await Scenario.load("singleFile", "Brackets");
+        await scenario.load("singleFile", "Brackets");
         const unchangedContent = actual("src/main.ts");
         const invalidMatchUri = toMatchUri(actualUri("src/main.ts"), "999999");
 

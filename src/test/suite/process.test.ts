@@ -1,64 +1,58 @@
 import { expect } from "chai";
-import { Position, Range } from "vscode";
-import { stringify } from "../../utils/uri";
-import { actualUri } from "../utils/fs";
-import { startMigration } from "../utils/process";
-import { addBreakpoint, restartProcess, startDebugging, stopDebugging, waitForBreakpointHit } from "../utils/process";
+import { TYPES } from "../../di/types";
+import { MigrationScriptProcessController } from "../../migrationScriptProcessController";
+import { getDebugStarts, killProcess, startDebugging, stopMigration } from "../utils/process";
 import { getDisplayedTree } from "../utils/tree";
-import { Scenario } from "./scenario";
 
 suite("Migration Script Process", () => {
     test("can be debugged", async () => {
-        await Scenario.load("singleFile");
+        await scenario.load("singleFile");
 
-        await startDebugging();
-        const breakPointHold = waitForBreakpointHit();
-        addBreakpoint(
-            actualUri(".vscode/migrations/bracketMigration.ts"),
-            new Position(11, 9)
-        );
-        void startMigration("Brackets");
+        await startDebugging("Brackets");
 
-        const breakpoint = await breakPointHold;
-        expect(breakpoint.location.range).to.deep.equal(new Range(new Position(11, 9), new Position(11, 9)));
-        expect(stringify(breakpoint.location.uri))
-            .to.equal(stringify(actualUri(".vscode/migrations/bracketMigration.ts")));
+        const debugPort = await scenario.get<MigrationScriptProcessController>(TYPES.MigrationScriptProcessController).send("getDebugPort");
+
+        expect(getDebugStarts()).to.deep.equal([{
+            folder: undefined,
+            nameOrConfiguration: {
+                type: "pwa-node",
+                request: "attach",
+                name: "Attach to Migration Script Process",
+                port: debugPort,
+                protocol: "inspector",
+                skipFiles: [
+                    "<node_internals>/**"
+                ],
+                pauseForSourceMap: true
+            },
+            parentSessionOrOptions: undefined
+        }]);
     });
 
-    test("can be stopped debugging", async () => {
-        await Scenario.load("singleFile");
+    test("clears matches when migration process is killed", async () => {
+        await scenario.load("singleFile", "Brackets");
 
-        const breakPointHold = waitForBreakpointHit();
-        addBreakpoint(
-            actualUri(".vscode/migrations/bracketMigration.ts"),
-            new Position(11, 9)
-        );
-        await startDebugging();
-        const migrationStarted = startMigration("Brackets");
-
-        await breakPointHold;
-
-        await stopDebugging();
-        await migrationStarted;
-        const actualTree = await getDisplayedTree();
-        const expectedTree = {
-            "main.ts": [
-                `>>>First match<<<`,
-                `>>>Second match<<<`,
-                `>>>Third match<<<`
-            ]
-        };
-
-        expect(actualTree).to.deep.equal(expectedTree);
-    });
-
-    test("clears migration when restarted", async () => {
-        await Scenario.load("singleFile", "Brackets");
-
-        await restartProcess();
+        await killProcess();
 
         const actualTree = await getDisplayedTree();
         const expectedTree = {};
         expect(actualTree).to.deep.equal(expectedTree);
+    });
+
+    test("is terminated if migration is stopped", async () => {
+        await scenario.load("singleFile", "Brackets");
+
+        await stopMigration();
+
+        const migrationScriptProcess = scenario.get<MigrationScriptProcessController>(TYPES.MigrationScriptProcessController);
+        expect(migrationScriptProcess.isRunning).to.be.false;
+    });
+
+    test("rejects command if migration fails to start", async () => {
+        await expect(scenario.load("singleFile", "Suicidal")).to.eventually.be.rejectedWith("I am a suicidal migration script");
+    });
+
+    test("rejects command if migration script process dies", async () => {
+        await expect(scenario.load("singleFile", "Lazy Suicidal")).to.eventually.be.rejectedWith("Migration Script Process died.");
     });
 });

@@ -23,12 +23,14 @@ export class MigrationHolderRemote {
             await this.migrationProcess.send("startMigration", migrationName);
         } catch (error) {
             this.handleMigrationError(error);
+            throw error;
         }
         this.changeEmitter.fire();
     }
 
     public async stop(): Promise<void> {
         await this.migrationProcess.send("stopMigration");
+        await this.migrationProcess.kill();
         this.changeEmitter.fire();
     }
 
@@ -36,9 +38,14 @@ export class MigrationHolderRemote {
         return await this.migrationProcess.send("getMigrationName");
     }
 
+    public isRunning(): boolean {
+        return this.migrationProcess.isRunning;
+    }
+
     public async hasMigration(): Promise<boolean> {
-        const migration = await this.getName();
-        return migration !== undefined;
+        if (!this.isRunning()) return false;
+        if (await this.getName() === undefined) return false;
+        return true;
     }
 
     public async getMatchedFiles(): Promise<MatchedFile[]> {

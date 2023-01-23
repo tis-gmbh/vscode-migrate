@@ -3,10 +3,9 @@ import "reflect-metadata";
 import { commands, debug, extensions, window, workspace } from "vscode";
 import { ApplyChangeCommand } from "../command/applyChangeCommand";
 import { CommandManager } from "../command/commandManager";
-import { DebugMigrationScriptProcessCommand } from "../command/debugMigrationScriptProcesCommand";
-import { RestartMigrationScriptProcessCommand } from "../command/restartMigrationScriptProcessCommand";
+import { DebugMigrationScriptProcessCommand } from "../command/debugMigrationScriptProcessCommand";
+import { KillMigrationScriptProcessCommand } from "../command/killMigrationScriptProcessCommand";
 import { StartMigrationCommand } from "../command/startMigrationCommand";
-import { StopDebugMigrationScriptProcessCommand } from "../command/stopDebugMigrationScriptCommand";
 import { StopMigrationCommand } from "../command/stopMigrationCommand";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
@@ -45,8 +44,7 @@ export const vscCommands = new ContainerModule(bind => {
     bind(TYPES.Command).to(StartMigrationCommand);
     bind(TYPES.Command).to(StopMigrationCommand);
     bind(TYPES.Command).to(DebugMigrationScriptProcessCommand);
-    bind(TYPES.Command).to(StopDebugMigrationScriptProcessCommand);
-    bind(TYPES.Command).to(RestartMigrationScriptProcessCommand);
+    bind(TYPES.Command).to(KillMigrationScriptProcessCommand);
 });
 
 export const vscModules = new ContainerModule(bind => {

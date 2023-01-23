@@ -15,7 +15,7 @@ jobs:
           node-version: 16.x
       - run: npm install
       - run: npm run compile
-      - run: npm run lint
+      - run: npm run lint -- --max-warnings 0
   test:
     needs: compile_and_lint
     timeout-minutes: 30

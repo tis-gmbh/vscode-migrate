@@ -29,9 +29,6 @@ export const VSC_TYPES = {
 
 export interface VscDebug extends Partial<typeof debug> {
     startDebugging: typeof debug.startDebugging;
-    stopDebugging: typeof debug.stopDebugging;
-    removeBreakpoints: typeof debug.removeBreakpoints;
-    breakpoints: typeof debug.breakpoints;
 }
 
 export interface VscWorkspace extends Partial<typeof workspace> {

@@ -76,9 +76,11 @@ export async function run(): Promise<void> {
             });
         });
     } catch (err) {
+        // eslint-disable-next-line no-console
         console.error(err);
         throw err;
     } finally {
+        // eslint-disable-next-line no-console
         console.log("Done running tests");
         if (nyc) {
             nyc.writeCoverageFile();

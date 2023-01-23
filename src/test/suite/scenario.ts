@@ -31,24 +31,25 @@ export interface Decoration {
 export class Scenario {
     private readonly container = new Container();
     private readonly vsCodeMigrate: VSCodeMigrate;
+    public name = "Unnamed Scenario";
 
     private readonly extensionContext: ExtensionContext = {
         subscriptions: [],
     } as Partial<ExtensionContext> as ExtensionContext;
 
-    private constructor(public name: string) {
-        scenario = this;
-        emptyDirSync(testWorkspacePath);
-        copySync(originalPath(), testWorkspacePath, { recursive: true });
-        copySync(migrationsPath, join(testWorkspacePath, ".vscode/migrations"));
-
+    public constructor() {
         this.container.load(modules, vscStubs, vscCommands, testModule);
         this.vsCodeMigrate = this.container.get(TYPES.VscMigrate);
     }
 
-    public static async load(name: string, migrationName?: string): Promise<void> {
-        new Scenario(name);
-        await scenario.vsCodeMigrate.activate(scenario.extensionContext);
+    public async load(name: string, migrationName?: string): Promise<void> {
+        this.name = name;
+
+        emptyDirSync(testWorkspacePath);
+        copySync(originalPath(), testWorkspacePath, { recursive: true });
+        copySync(migrationsPath, join(testWorkspacePath, ".vscode/migrations"));
+
+        await this.vsCodeMigrate.activate(scenario.extensionContext);
         if (migrationName) {
             await startMigration(migrationName);
         }
