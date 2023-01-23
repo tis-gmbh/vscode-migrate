@@ -10,7 +10,7 @@ import { Scenario } from "./scenario";
 
 suite("Tree", () => {
     test("shows matches", async () => {
-        await Scenario.load("twoFile", "Brackets");
+        await scenario.load("twoFile", "Brackets");
 
         expect(progressRecords()).to.deep.contain({
             messages: ["Finding files..."],
@@ -43,7 +43,7 @@ suite("Tree", () => {
     });
 
     test("is updated when change was applied", async () => {
-        await Scenario.load("singleFile", "Brackets");
+        await scenario.load("singleFile", "Brackets");
         const firstMatch = getFirstMatch()!;
         const expectedTree = {
             "main.ts": [
@@ -60,7 +60,7 @@ suite("Tree", () => {
     });
 
     test("removes file when all changes have been applied", async () => {
-        await Scenario.load("twoFile", "Brackets");
+        await scenario.load("twoFile", "Brackets");
         const filePath = actualUri("src/firstFile.ts");
         const expectedTree = {
             "secondFile.ts": [
@@ -76,7 +76,7 @@ suite("Tree", () => {
     });
 
     test("opens diff when tree item is selected", async () => {
-        await Scenario.load("singleFile", "Brackets");
+        await scenario.load("singleFile", "Brackets");
         const fileUri = actualUri("src/main.ts");
         const expectedLeftUri = stringify(fileUri);
         const expectedRightUri = stringify(toMatchUri(fileUri, "0"));
@@ -92,7 +92,7 @@ suite("Tree", () => {
     });
 
     test("is cleared when migration is stopped", async () => {
-        await Scenario.load("singleFile", "Brackets");
+        await scenario.load("singleFile", "Brackets");
 
         await stopMigration();
 

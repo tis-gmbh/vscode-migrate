@@ -125,5 +125,5 @@ const wrapConstructor = <T>(factoryOrConstructor: FactoryType<T> | ConstructorTy
 };
 
 const isConstructor = <T>(factoryOrConstructor: FactoryType<T> | ConstructorType<T>): factoryOrConstructor is ConstructorType<T> => {
-    return factoryOrConstructor.prototype.constructor;
+    return factoryOrConstructor.prototype?.constructor;
 };

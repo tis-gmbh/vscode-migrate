@@ -44,6 +44,7 @@ export class ApplyChangeCommand extends NextChangeCommand implements Command {
             await this.saveEditor(matchUri);
             await super.execute(matchUri);
             await this.applyChangesWithProgress(matchUri);
+            await this.checkMigrationDone();
         } finally {
             const index = this.queue.indexOf(stringifiedUri);
             if (index > -1) {
@@ -92,6 +93,7 @@ export class ApplyChangeCommand extends NextChangeCommand implements Command {
         progress.report({ message: "Saving File" });
         const newContent = await this.changedContentProvider.readFile(matchUri);
         await this.workspace.fs.writeFile(fileUri, newContent);
+
         this.matchManager.resolveEntry(matchUri);
 
         progress.report({ message: "Running verification tasks" });
@@ -116,5 +118,11 @@ export class ApplyChangeCommand extends NextChangeCommand implements Command {
         const errorMessage = error.message || error;
         const message = `Failed to run verification tasks, the following error was thrown: ${errorMessage}`;
         void this.window.showErrorMessage(message);
+    }
+
+    private async checkMigrationDone(): Promise<void> {
+        if (this.matchManager.allResolved) {
+            await this.migrationHolder.stop();
+        }
     }
 }

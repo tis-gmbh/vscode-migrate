@@ -14,6 +14,7 @@ async function main(): Promise<void> {
 
         await runTests({ extensionDevelopmentPath, extensionTestsPath, launchArgs: [testWorkspace] });
     } catch (err) {
+        // eslint-disable-next-line no-console
         console.error("Failed to run tests");
         process.exit(1);
     }

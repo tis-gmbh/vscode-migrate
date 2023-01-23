@@ -1,11 +1,19 @@
 import { injectable } from "inversify";
-import { debug } from "vscode";
+import { Breakpoint, DebugConfiguration, DebugSession, DebugSessionOptions, WorkspaceFolder } from "vscode";
 import { VscDebug } from "../../di/types";
+
+export interface DebugStartRecord {
+    folder: WorkspaceFolder | undefined;
+    nameOrConfiguration: string | DebugConfiguration;
+    parentSessionOrOptions?: DebugSession | DebugSessionOptions | undefined;
+}
 
 @injectable()
 export class DebugStub implements VscDebug {
-    public startDebugging = debug.startDebugging;
-    public stopDebugging = debug.stopDebugging;
-    public removeBreakpoints = debug.removeBreakpoints;
-    public breakpoints = debug.breakpoints;
+    public debugStarts: DebugStartRecord[] = [];
+
+    public startDebugging(folder: WorkspaceFolder | undefined, nameOrConfiguration: string | DebugConfiguration, parentSessionOrOptions?: DebugSession | DebugSessionOptions | undefined): Thenable<boolean> {
+        this.debugStarts.push({ folder, nameOrConfiguration, parentSessionOrOptions });
+        return Promise.resolve(true);
+    }
 }

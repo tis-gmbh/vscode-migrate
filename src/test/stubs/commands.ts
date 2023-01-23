@@ -8,7 +8,8 @@ import { TEST_TYPES } from "../types";
 export interface CommandRecord {
     id: string,
     args: any[],
-    result?: any
+    result?: any,
+    error?: any
 }
 
 @injectable()
@@ -32,14 +33,20 @@ export class CommandsStub implements VscCommands {
         this.commandRecords.push(record);
 
         const commandInfo = this.commands.get(command);
-        if (commandInfo) {
-            record.result = await commandInfo.callback.apply(commandInfo.thisArg, args);
-        } else {
-            record.result = await commands.executeCommand(command, ...args);
-        }
+        try {
+            if (commandInfo) {
+                record.result = await commandInfo.callback.apply(commandInfo.thisArg, args);
+            } else {
+                record.result = await commands.executeCommand(command, ...args);
+            }
 
-        this.logger.log(`Command ${command} with args ${args} finished with result ${record.result}`);
-        return Promise.resolve();
+            this.logger.log(`Command ${command} with args ${args} finished with result ${record.result}`);
+            return Promise.resolve();
+        } catch (error) {
+            record.error = error;
+            this.logger.log(`Command ${command} with args ${args} failed with error ${JSON.stringify(error)} `);
+            throw error;
+        }
     };
 
     public registerCommand(command: string, callback: (...args: any[]) => any, thisArg?: any): Disposable {

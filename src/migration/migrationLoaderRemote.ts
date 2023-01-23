@@ -16,7 +16,7 @@ export class MigrationLoaderRemote {
         @inject(TYPES.MigrationScriptProcessController) private readonly migrationProcess: MigrationScriptProcessController
     ) { }
 
-    public refresh(): Thenable<void> {
+    public getMigrations(): Thenable<void> {
         return this.window.withProgress({
             title: "Looking for migrations",
             location: ProgressLocation.Notification,

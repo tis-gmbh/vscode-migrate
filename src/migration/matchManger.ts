@@ -146,4 +146,8 @@ export class MatchManager {
     public get ready(): Promise<void> {
         return this.readyPromise;
     }
+
+    public get allResolved(): boolean {
+        return Object.values(this.matches).every(matches => matches.every(isResolved));
+    }
 }
