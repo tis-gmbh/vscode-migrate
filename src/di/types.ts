@@ -5,8 +5,10 @@ export const TYPES = {
     MatchManager: Symbol.for("MatchManager"),
     MigrationHolderRemote: Symbol.for("MigrationHolderRemote"),
     MigrationLoaderRemote: Symbol.for("MigrationLoaderRemote"),
-    MatchesTreeProvider: Symbol.for("ChangesTreeProvider"),
-    ChangedContentProvider: Symbol.for("ChangedContentProvider"),
+    AllMatchesTreeProvider: Symbol.for("AllChangesTreeProvider"),
+    WellCoveredMatchesTreeProvider: Symbol.for("WellCoveredMatchesTreeProvider"),
+    MatchFileSystemProvider: Symbol.for("ChangedContentProvider"),
+    CoverageProvider: Symbol.for("CoverageProvider"),
     Command: Symbol.for("Command"),
     CommandManager: Symbol.for("CommandManager"),
     VersionControl: Symbol.for("VersionControl"),
@@ -15,7 +17,9 @@ export const TYPES = {
     TextDecorationConsumer: Symbol.for("CoverageDecorationConsumer"),
     MigrationOutputChannel: Symbol.for("MigrationOutputChannel"),
     MigrationScriptProcessController: Symbol.for("MigrationScriptProcessController"),
-    MigrationStdOutChannel: Symbol.for("MigrationStdOutChannel")
+    MigrationStdOutChannel: Symbol.for("MigrationStdOutChannel"),
+    MergeService: Symbol.for("MergeService"),
+    MatchCoverageFilter: Symbol.for("MatchCoverageFilter")
 };
 
 export const VSC_TYPES = {
@@ -39,6 +43,7 @@ export interface VscWorkspace extends Partial<typeof workspace> {
     textDocuments: typeof workspace.textDocuments;
     findFiles: typeof workspace.findFiles;
     workspaceFolders: typeof workspace.workspaceFolders;
+    saveAll: typeof workspace.saveAll;
 }
 
 export interface VscExtensions extends Partial<typeof extensions> {

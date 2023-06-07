@@ -14,4 +14,5 @@ export class WorkspaceStub implements VscWorkspace {
     public findFiles = workspace.findFiles;
     public asRelativePath = workspace.asRelativePath;
     public workspaceFolders = workspace.workspaceFolders;
+    public saveAll = workspace.saveAll;
 }

@@ -1,6 +1,6 @@
 import { inject, injectable } from "inversify";
 import { ProgressLocation } from "vscode";
-import { TYPES, VscCommands, VscWindow, VSC_TYPES } from "../di/types";
+import { TYPES, VSC_TYPES, VscCommands, VscWindow } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { MigrationLoaderRemote } from "../migration/migrationLoaderRemote";
@@ -56,6 +56,6 @@ export class StartMigrationCommand implements Command {
     }
 
     private async showQueuedChanges(): Promise<void> {
-        await this.commands.executeCommand("vscode-migrate.queued-matches.focus");
+        await this.commands.executeCommand("vscode-migrate.all-matches.focus");
     }
 }

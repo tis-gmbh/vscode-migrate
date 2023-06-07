@@ -3,12 +3,11 @@ import { stringify, toFileUri, toMatchUri } from "../../utils/uri";
 import { applyAllFor, applyChangesFor } from "../utils/apply";
 import { commandRecords } from "../utils/commands";
 import { actualUri } from "../utils/fs";
-import { progressRecords, treeUpdates } from "../utils/gui";
+import { progressRecords } from "../utils/gui";
 import { stopMigration } from "../utils/process";
-import { clickTreeItem, getDisplayedTree, getFirstMatch, getTreeItemsOfUri } from "../utils/tree";
-import { Scenario } from "./scenario";
+import { allMatchesTree, allTreeUpdate, clickTreeItem, getAllMatchesTree, getFirstMatch, getTreeItemsOfUri } from "../utils/tree";
 
-suite("Tree", () => {
+suite("All Matches Tree", () => {
     test("shows matches", async () => {
         await scenario.load("twoFile", "Brackets");
 
@@ -21,12 +20,11 @@ suite("Tree", () => {
             done: true
         });
         expect(commandRecords()).to.deep.contain({
-            id: "vscode-migrate.queued-matches.focus",
+            id: "vscode-migrate.all-matches.focus",
             args: [],
             result: undefined
         });
 
-        const actualTree = await getDisplayedTree();
         const expectedTree = {
             "firstFile.ts": [
                 `>>>First match<<<`,
@@ -38,8 +36,8 @@ suite("Tree", () => {
             ]
         };
 
-        expect(actualTree).to.deep.equal(expectedTree);
-        expect(treeUpdates()).to.deep.equal([[undefined]]);
+        await expect(allMatchesTree(expectedTree)).to.eventually.exist;
+        await expect(allTreeUpdate([undefined])).to.eventually.exist;
     });
 
     test("is updated when change was applied", async () => {
@@ -54,9 +52,8 @@ suite("Tree", () => {
 
         await applyChangesFor(firstMatch);
 
-        const actualTree = await getDisplayedTree();
-        expect(actualTree).to.deep.equal(expectedTree);
-        expect(treeUpdates()).to.deep.contain([[stringify(toFileUri(firstMatch))]]);
+        await expect(allMatchesTree(expectedTree)).to.eventually.exist;
+        await expect(allTreeUpdate([[stringify(toFileUri(firstMatch))]])).to.eventually.exist;
     });
 
     test("removes file when all changes have been applied", async () => {
@@ -70,9 +67,8 @@ suite("Tree", () => {
 
         await applyAllFor(filePath);
 
-        const actualTree = await getDisplayedTree();
-        expect(actualTree).to.deep.equal(expectedTree);
-        expect(treeUpdates()).to.deep.contain([undefined]);
+        await expect(allMatchesTree(expectedTree)).to.eventually.exist;
+        await expect(allTreeUpdate([undefined])).to.eventually.exist;
     });
 
     test("opens diff when tree item is selected", async () => {
@@ -96,7 +92,7 @@ suite("Tree", () => {
 
         await stopMigration();
 
-        const actualTree = await getDisplayedTree();
+        const actualTree = await getAllMatchesTree();
         const expectedTree = {};
         expect(actualTree).to.deep.equal(expectedTree);
     });

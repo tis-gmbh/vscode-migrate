@@ -1,8 +1,7 @@
-import { inject, injectable } from "inversify";
+import { injectable } from "inversify";
 import { basename } from "path";
-import { ProviderResult, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri } from "vscode";
-import { TYPES } from "../di/types";
-import { MatchManager } from "../migration/matchManger";
+import { Event, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri } from "vscode";
+import { MatchEntry } from "../migration/matchManger";
 import { parse, stringify, toFileUri } from "../utils/uri";
 
 function isMatchUri(uri: string): boolean {
@@ -10,17 +9,17 @@ function isMatchUri(uri: string): boolean {
 }
 
 @injectable()
-export class QueuedMatchesProvider implements TreeDataProvider<string> {
-    public readonly onDidChangeTreeData = this.matchManager.onDidChange;
+export abstract class MatchTreeProvider implements TreeDataProvider<string> {
+    public readonly onDidChangeTreeData = this.matchSource.onDidChange;
 
     public constructor(
-        @inject(TYPES.MatchManager) private readonly matchManager: MatchManager
+        private readonly matchSource: MatchSource
     ) { }
 
     public getTreeItem(uri: string): TreeItem {
         const parsedUri = parse(uri);
         if (isMatchUri(uri)) {
-            const match = this.matchManager.byMatchUriOrThrow(parsedUri);
+            const match = this.matchSource.byMatchUriOrThrow(parsedUri);
             const item: TreeItem = {
                 id: uri,
                 label: `${match.match.label}`
@@ -45,19 +44,28 @@ export class QueuedMatchesProvider implements TreeDataProvider<string> {
         };
     }
 
-    public getChildren(uri?: string): ProviderResult<string[]> {
+    public async getChildren(uri?: string | undefined): Promise<string[]> {
         if (!uri) {
-            return this.matchManager
-                .getQueuedFiles()
-                .map(uri => stringify(uri));
+            return this.getQueuedFiles();
         }
         if (isMatchUri(uri)) {
             return [];
         }
 
-        return this.matchManager
-            .getMatchUrisByFileUri(parse(uri))
+        return (await this.matchSource
+            .getMatchUrisByFileUri(parse(uri)))
             .map(matchUri => stringify(matchUri));
+    }
+
+    protected async getQueuedFiles(): Promise<string[]> {
+        return (await this.matchSource.getQueuedFiles())
+            .map(uri => stringify(uri));
     }
 }
 
+export interface MatchSource {
+    onDidChange: Event<string[] | undefined>;
+    byMatchUriOrThrow(uri: Uri): MatchEntry;
+    getMatchUrisByFileUri(uri: Uri): Promise<Uri[]> | Uri[];
+    getQueuedFiles(): Promise<Uri[]> | Uri[];
+}

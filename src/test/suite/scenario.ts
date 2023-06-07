@@ -28,28 +28,46 @@ export interface Decoration {
     options?: DecorationInstanceRenderOptions;
 }
 
+type ScenarioName = "applyWhileEdit"
+    | "conflict"
+    | "covered"
+    | "coveredSingle"
+    | "fullCoverage"
+    | "hiddenCoverage"
+    | "manualMerge"
+    | "manualModification"
+    | "partiallyCovered"
+    | "singleFile"
+    | "twoFile";
+
+type MigrationName = "Brackets"
+    | "Brackets - Custom Commit Message"
+    | "Brackets - Whole File As Single Change"
+    | "Lazy Suicidal"
+    | "Suicidal";
+
 export class Scenario {
     private readonly container = new Container();
-    private readonly vsCodeMigrate: VSCodeMigrate;
-    public name = "Unnamed Scenario";
+    private vsCodeMigrate!: VSCodeMigrate;
+    public name!: ScenarioName;
 
     private readonly extensionContext: ExtensionContext = {
         subscriptions: [],
     } as Partial<ExtensionContext> as ExtensionContext;
 
     public constructor() {
-        this.container.load(modules, vscStubs, vscCommands, testModule);
-        this.vsCodeMigrate = this.container.get(TYPES.VscMigrate);
     }
 
-    public async load(name: string, migrationName?: string): Promise<void> {
+    public async load(name: ScenarioName, migrationName?: MigrationName): Promise<void> {
         this.name = name;
 
         emptyDirSync(testWorkspacePath);
         copySync(originalPath(), testWorkspacePath, { recursive: true });
         copySync(migrationsPath, join(testWorkspacePath, ".vscode/migrations"));
 
-        await this.vsCodeMigrate.activate(scenario.extensionContext);
+        this.container.load(modules, vscStubs, vscCommands, testModule);
+        this.vsCodeMigrate = this.container.get(TYPES.VscMigrate);
+        this.vsCodeMigrate.activate(scenario.extensionContext);
         if (migrationName) {
             await startMigration(migrationName);
         }
@@ -63,9 +81,16 @@ export class Scenario {
         return this.container.get<C>(module);
     }
 
-    public dumpLogs(fileName: string): void {
+    public getLogDumper(fileName: string): () => void {
         const logger = this.container.get<Logger>(TEST_TYPES.Logger);
-        logger.dumpLogs(fileName);
+        return () => {
+            logger.dumpLogs(fileName);
+        };
+    }
+
+    public log(message: string): void {
+        const logger = this.container.get<Logger>(TEST_TYPES.Logger);
+        logger.log(message);
     }
 
     public async teardown(): Promise<void> {
@@ -75,6 +100,8 @@ export class Scenario {
         for (const sub of this.extensionContext.subscriptions) {
             sub.dispose();
         }
+
+        await this.container.unbindAllAsync();
 
         logger.log("Scenario torn down.");
     }

@@ -1,6 +1,7 @@
 import { inject, injectable } from "inversify";
 import { Disposable, TextEditor } from "vscode";
-import { VscWindow, VSC_TYPES } from "../di/types";
+import { TYPES, VSC_TYPES, VscWindow } from "../di/types";
+import { MigrationOutputChannel } from "../migration/migrationOutputChannel";
 import { TextDecorationProvider } from "./textDecorationProvider";
 
 @injectable()
@@ -8,7 +9,8 @@ export class TextDecorationConsumer {
     private readonly providers: TextDecorationProvider[] = [];
 
     public constructor(
-        @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow
+        @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow,
+        @inject(TYPES.MigrationOutputChannel) private readonly outputChannel: MigrationOutputChannel,
     ) {
         this.window.onDidChangeVisibleTextEditors(() => this.applyAll());
     }
@@ -39,7 +41,7 @@ export class TextDecorationConsumer {
             const decorations = await provider.getDecorations(editor) || [];
             editor.setDecorations(provider.decorationType, decorations);
         } catch (error) {
-            // ignore
+            this.outputChannel.append(`Failed to set decorations for ${editor.document.uri.toString()}: ${error}\n`);
         }
     }
 }

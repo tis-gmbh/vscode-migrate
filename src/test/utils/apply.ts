@@ -3,7 +3,7 @@ import { TYPES } from "../../di/types";
 import { MatchManager } from "../../migration/matchManger";
 import { toFileUri } from "../../utils/uri";
 import { Logger } from "../logger";
-import { Commit, GitExtensionStub } from "../stubs/gitExtension";
+import { CommitRecord, GitExtensionStub } from "../stubs/gitExtension";
 import { TEST_TYPES } from "../types";
 import { execute } from "./commands";
 import { setModified } from "./vcs";
@@ -27,9 +27,17 @@ export async function applyAllFor(fileUri: Uri): Promise<void> {
     log(`Applied all ${currentMatches.length} changes for ${fileUri.fsPath}`);
 }
 
-export function commits(): Commit[] {
-    const gitStub = scenario.get<GitExtensionStub>(TEST_TYPES.GitExtension);
-    return gitStub.commits;
+export function applyWellCoveredMatches(): Promise<void> {
+    return execute("vscode-migrate.apply-well-covered-matches");
+}
+
+export function commits(): CommitRecord[] {
+    const gitStub = getGitStub();
+    return gitStub.commitRecords;
+}
+
+export function commit(criteria: Partial<CommitRecord>): Promise<CommitRecord> {
+    return getGitStub().commitRecords.awaitEntryMatching(criteria);
 }
 
 function log(message: string): void {
@@ -39,4 +47,8 @@ function log(message: string): void {
 
 function getMatchManager(): MatchManager {
     return scenario.get(TYPES.MatchManager);
+}
+
+function getGitStub(): GitExtensionStub {
+    return scenario.get<GitExtensionStub>(TEST_TYPES.GitExtension);
 }

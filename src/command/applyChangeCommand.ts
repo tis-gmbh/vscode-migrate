@@ -1,36 +1,27 @@
 import { inject, injectable } from "inversify";
 import { FileSystemProvider, Progress, ProgressLocation, Uri } from "vscode";
-import { TYPES, VscCommands, VscWindow, VscWorkspace, VSC_TYPES } from "../di/types";
+import { TYPES, VSC_TYPES, VscCommands, VscWindow, VscWorkspace } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { stringify, toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
 import { Command } from "./command";
-import { NextChangeCommand } from "./nextChangeCommand";
 
 @injectable()
-export class ApplyChangeCommand extends NextChangeCommand implements Command {
+export class ApplyChangeCommand implements Command {
     public readonly id = "vscode-migrate.apply-change";
     private lastExecution?: Thenable<void>;
     private readonly queue: string[] = [];
 
     public constructor(
-        @inject(TYPES.ChangedContentProvider) protected readonly changedContentProvider: FileSystemProvider,
+        @inject(TYPES.MatchFileSystemProvider) protected readonly changedContentProvider: FileSystemProvider,
         @inject(VSC_TYPES.VscWindow) protected readonly window: VscWindow,
         @inject(VSC_TYPES.VscWorkspace) protected readonly workspace: VscWorkspace,
         @inject(TYPES.MatchManager) protected readonly matchManager: MatchManager,
         @inject(VSC_TYPES.VscCommands) protected readonly commands: VscCommands,
         @inject(TYPES.VersionControl) protected readonly versionControl: VersionControl,
         @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote
-    ) {
-        super(
-            changedContentProvider,
-            window,
-            workspace,
-            matchManager,
-            commands
-        );
-    }
+    ) { }
 
     public async execute(matchUri: Uri): Promise<void> {
         const stringifiedUri = stringify(matchUri);
@@ -42,7 +33,7 @@ export class ApplyChangeCommand extends NextChangeCommand implements Command {
         this.queue.push(stringifiedUri);
         try {
             await this.saveEditor(matchUri);
-            await super.execute(matchUri);
+            await this.closeCurrent(matchUri);
             await this.applyChangesWithProgress(matchUri);
             await this.checkMigrationDone();
         } finally {
@@ -50,6 +41,13 @@ export class ApplyChangeCommand extends NextChangeCommand implements Command {
             if (index > -1) {
                 this.queue.splice(index, 1);
             }
+        }
+    }
+
+    private async closeCurrent(matchUri: Uri): Promise<void> {
+        const active = this.window.activeTextEditor;
+        if (active && stringify(active.document.uri) === stringify(matchUri)) {
+            await this.commands.executeCommand("workbench.action.closeActiveEditor");
         }
     }
 

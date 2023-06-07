@@ -1,7 +1,7 @@
 import { inject, injectable } from "inversify";
 import { } from "querystring";
 import { EventEmitter, Uri } from "vscode";
-import { TYPES, VscWorkspace, VSC_TYPES } from "../di/types";
+import { TYPES, VSC_TYPES, VscWorkspace } from "../di/types";
 import { Match, MatchedFile } from "../migrationTypes";
 import { fsPathToFileUri, getMatchId, parse, stringify, toFileUri, toMatchUri } from "../utils/uri";
 import { MigrationHolderRemote } from "./migrationHolderRemote";
@@ -83,20 +83,15 @@ export class MatchManager {
     public getMatchUrisByFileUri(fileUri: Uri): Uri[] {
         const path = this.getKeyByFileUri(fileUri);
         return Object.entries(this.matches[path] || [])
-            .filter(([, match]) => match.state === "queued")
-            .map(([index],) => toMatchUri(fileUri, index));
-    }
-
-    public getAllMatchUrisByFileUri(fileUri: Uri): Uri[] {
-        const path = this.getKeyByFileUri(fileUri);
-        return Object.entries(this.matches[path] || [])
-            .filter(([, match]) => match.state === "queued")
-            .map(([index],) => toMatchUri(fileUri, index));
+            .filter(([_matchIndex, match]) => match.state === "queued")
+            .map(([matchIndex],) => toMatchUri(fileUri, matchIndex));
     }
 
     public getMatchesByFileUri(fileUri: Uri): Match[] {
-        return this.getMatchUrisByFileUri(fileUri)
-            .map(uri => this.byMatchUriOrThrow(uri).match);
+        const path = this.getKeyByFileUri(fileUri);
+        return (this.matches[path] || [])
+            .filter(matchEntry => matchEntry.state === "queued")
+            .map(matchEntry => matchEntry.match);
     }
 
     public resolveEntry(matchUri: Uri): void {
@@ -113,7 +108,28 @@ export class MatchManager {
         this.updateFileEntry(toFileUri(matchUri), fileMatches);
     }
 
-    private async replaceMatches(): Promise<void> {
+    public resolveEntries(matchUris: Uri[]): void {
+        const fileMatches = matchUris.reduce((acc, matchUri) => {
+            const path = this.getKeyByMatchUri(matchUri);
+            const matchId = this.getMatchIdByMatchUri(matchUri);
+
+            const fileMatches = this.matches[path] || [];
+            const match = fileMatches[matchId];
+            if (!match) {
+                throw new Error(`Unable to find match ${matchId} for file ${path}.`);
+            }
+            match.state = "resolved";
+
+            acc[path] = fileMatches;
+            return acc;
+        }, {} as Record<string, Array<MatchEntry>>);
+
+        Object.entries(fileMatches).forEach(([path, matches]) => {
+            this.updateFileEntry(parse(path), matches);
+        });
+    }
+
+    private replaceMatches(): Promise<void> {
         this.readyPromise = (async (): Promise<void> => {
             this.stateEmitter.fire("updating");
             let files: MatchedFile[] = [];

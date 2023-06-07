@@ -4,12 +4,11 @@ import { TYPES, VscWorkspace, VSC_TYPES } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { toFileUri } from "../utils/uri";
-import { API, Repository } from "./git";
+import { Repository } from "./git";
 import { GitExtension } from "./gitExtension";
 
 @injectable()
 export class VersionControl {
-    private gitApi!: API;
 
     public constructor(
         @inject(TYPES.MatchManager) private readonly matchManager: MatchManager,
@@ -19,30 +18,30 @@ export class VersionControl {
     ) { }
 
     public async stageAndCommit(matchUri: Uri): Promise<void> {
-        this.gitApi = await this.gitExtension.getGitApi();
-        await this.stage(matchUri);
-        await this.commit(matchUri);
+        await this.stageAll();
+        await this.commit(await this.getCommitMessageFor(matchUri));
     }
 
-    private async stage(matchUri: Uri): Promise<void> {
-        const fileUri = toFileUri(matchUri);
-        const repo = this.getRepoOrThrow(fileUri);
+    public async stageAll(): Promise<void> {
+        const repo = await this.getWorkspaceRepo();
         await repo.status();
         const changes = repo.state.workingTreeChanges;
         await repo.add(changes.map(change => change.uri.fsPath));
     }
 
-    private getRepoOrThrow(fileUri: Uri): Repository {
-        const repo = this.gitApi.getRepository(fileUri);
-        if (!repo) throw new Error("Modified file is not in a repo.");
+    private async getWorkspaceRepo(): Promise<Repository> {
+        const fileUri = this.workspace.workspaceFolders?.[0]?.uri;
+        if (!fileUri) throw new Error("No workspace folder found.");
+
+        const gitApi = await this.gitExtension.getGitApi();
+        const repo = gitApi.getRepository(fileUri);
+        if (!repo) throw new Error("Workspace is not a git repository.");
         return repo;
     }
 
-    private async commit(matchUri: Uri): Promise<void> {
-        const fileUri = toFileUri(matchUri);
-        const commitMessage = await this.getCommitMessageFor(matchUri);
-        const repo = this.getRepoOrThrow(fileUri);
-        await repo.commit(commitMessage, { noVerify: true });
+    public async commit(message: string): Promise<void> {
+        const repo = await this.getWorkspaceRepo();
+        await repo.commit(message, { noVerify: true });
     }
 
     private async getCommitMessageFor(matchUri: Uri): Promise<string> {

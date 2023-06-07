@@ -1,42 +1,29 @@
 import { inject, injectable } from "inversify";
-import { LcovFile, LcovLine, source as parseLcov } from "lcov-parse";
-import { DecorationOptions, EventEmitter, Position, ProviderResult, Range, RelativePattern, TextDocument, TextEditor, ThemableDecorationAttachmentRenderOptions, Uri } from "vscode";
-import { VscWindow, VscWorkspace, VSC_TYPES } from "../di/types";
+import { LcovLine } from "lcov-parse";
+import { DecorationOptions, EventEmitter, Position, ProviderResult, Range, TextDocument, TextEditor, ThemableDecorationAttachmentRenderOptions } from "vscode";
+import { TYPES, VscWindow, VSC_TYPES } from "../di/types";
 import { stringify } from "../utils/uri";
+import { CoverageProvider } from "./coverageProvider";
 import { TextDecorationProvider } from "./textDecorationProvider";
 
 @injectable()
 export class CoverageDecorationProvider implements TextDecorationProvider {
     public readonly decorationType = this.window.createTextEditorDecorationType({});
-    private coverageInfo: Record<string, LcovFile> = {};
-    private readonly ready: Promise<void>;
-
-    private readonly changeEmitter = new EventEmitter<TextEditor[] | undefined>();
-    public readonly onDecorationsChanged = this.changeEmitter.event;
+    private readonly _onDecorationsChanged = new EventEmitter<TextEditor[]>();
+    public readonly onDecorationsChanged = this._onDecorationsChanged.event;
 
     public constructor(
-        @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow,
-        @inject(VSC_TYPES.VscWorkspace) private readonly workspace: VscWorkspace,
+        @inject(TYPES.CoverageProvider) private readonly coverageProvider: CoverageProvider,
+        @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow
     ) {
-        this.ready = this.setupFileWatcher();
+        this.coverageProvider.onCoverageChanged(this.onCoverageChanged, this);
     }
 
-    private async setupFileWatcher(): Promise<void> {
-        const pattern = new RelativePattern(this.workspace.workspaceFolders![0]!.uri.fsPath, "coverage/lcov.info");
-        const watcher = this.workspace.createFileSystemWatcher(pattern);
-        watcher.onDidChange(file => this.updateCoverageUsing(file));
-        watcher.onDidCreate(file => this.updateCoverageUsing(file));
-        watcher.onDidDelete(() => this.coverageInfo = {});
-
-        const files = await this.workspace.findFiles(pattern);
-        if (files[0]) {
-            await this.updateCoverageUsing(files[0]);
-        }
-    }
-
-    private async updateCoverageUsing(file: Uri): Promise<void> {
-        await this.loadAndUpdateCoverageFrom(file);
-        this.changeEmitter.fire(undefined);
+    private onCoverageChanged(changedFiles: string[] | undefined): void {
+        const changedEditors = this.window.visibleTextEditors.filter(
+            editor => changedFiles?.includes(stringify(editor.document.uri))
+        );
+        this._onDecorationsChanged.fire(changedEditors);
     }
 
     public getDecorations(editor: TextEditor): ProviderResult<DecorationOptions[]> {
@@ -51,47 +38,8 @@ export class CoverageDecorationProvider implements TextDecorationProvider {
         return nextEditor?.document.uri.scheme === "match";
     }
 
-    private updateCoverage(fileCoverages: LcovFile[]): void {
-        const newCoverageInfo: Record<string, LcovFile> = {};
-        const workspaceFolder = this.workspace.workspaceFolders![0]!.uri;
-
-        for (const fileCoverage of fileCoverages) {
-            const uri = Uri.joinPath(workspaceFolder, fileCoverage.file.replace(/\\/g, "/"));
-            newCoverageInfo[stringify(uri)] = fileCoverage;
-        }
-
-        this.coverageInfo = newCoverageInfo;
-    }
-
-    private async getCoverageInfoFrom(file: Uri): Promise<LcovFile[]> {
-        try {
-            const content = (await this.workspace.fs.readFile(file)).toString();
-            return this.parseLcovAsync(content);
-        } catch (error) {
-            return [];
-        }
-    }
-
-    private parseLcovAsync(lcov: string): Promise<LcovFile[]> {
-        return new Promise((res, rej) => {
-            parseLcov(lcov, (error, data) => {
-                if (error) {
-                    rej(error);
-                    return;
-                }
-                res(data!);
-            });
-        });
-    }
-
-    private async loadAndUpdateCoverageFrom(file: Uri): Promise<void> {
-        const fileCoverages = await this.getCoverageInfoFrom(file);
-        this.updateCoverage(fileCoverages);
-    }
-
-    public async getDecorationsFor(document: TextDocument): Promise<DecorationOptions[]> {
-        await this.ready;
-        const info = this.coverageInfo[stringify(document.uri)];
+    public getDecorationsFor(document: TextDocument): DecorationOptions[] {
+        const info = this.coverageProvider.getInfoFor(document.uri);
         if (!info) return [];
 
         const lineCount = document.lineCount;

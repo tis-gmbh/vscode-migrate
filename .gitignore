@@ -5,6 +5,6 @@ node_modules
 *.vsix
 src/test/fixtures/_testWorkspace
 todo.md
-coverage
+/coverage
 .nyc_output
 logs

@@ -1,20 +1,21 @@
-import { DecorationInstanceRenderOptions, FileChangeType, Range as VscRange, TextDocument, Uri } from "vscode";
+import { DecorationInstanceRenderOptions, FileChangeType, TextDocument, Uri, Range as VscRange } from "vscode";
 import { TYPES } from "../../di/types";
-import { ChangedContentProvider } from "../../providers/changedContentProvider";
 import { CoverageDecorationProvider } from "../../providers/coverageDecorationProvider";
+import { MatchFileSystemProvider } from "../../providers/matchFileSystemProvider";
 import { stringify } from "../../utils/uri";
 import { Logger } from "../logger";
 import { Decoration } from "../suite/scenario";
 import { TEST_TYPES } from "../types";
+import { getWindow } from "./gui";
 
 
 export async function getChangedContentFor(matchUri: Uri): Promise<string> {
     const buffer = await getContentProvider().readFile(matchUri);
-    getContentProvider().watch(matchUri, { recursive: false, excludes: [] });
+    getContentProvider().watch(matchUri);
     return buffer.toString();
 }
 
-export async function updateOf(matchUri: Uri): Promise<void> {
+export function updateOf(matchUri: Uri): Promise<void> {
     const stringifiedUri = stringify(matchUri);
 
     return new Promise(res => {
@@ -33,16 +34,16 @@ export async function updateOf(matchUri: Uri): Promise<void> {
 export async function modifyContent(matchUri: Uri, callback: (originalContent: string) => string): Promise<void> {
     log(`Modifying content of ${matchUri}`);
     const originalBuffer = await getContentProvider().readFile(matchUri);
-    getContentProvider().watch(matchUri, { recursive: false, excludes: [] });
+    getContentProvider().watch(matchUri);
     const originalContent = originalBuffer.toString();
     const newContent = callback(originalContent);
     const buffer = Buffer.from(newContent);
-    await getContentProvider().writeFile(matchUri, buffer, { create: false, overwrite: true });
+    getContentProvider().writeFile(matchUri, buffer, { create: false, overwrite: true });
     log(`Modified content of ${matchUri}`);
 }
 
-export async function getDecorationsFor(fileUri: Uri): Promise<Decoration[]> {
-    const originalDecorations = await getCoverageDecorationProvider().getDecorationsFor({
+export function getDecorationsFor(fileUri: Uri): Decoration[] {
+    const originalDecorations = getCoverageDecorationProvider().getDecorationsFor({
         lineCount: 12,
         uri: fileUri
     } as Partial<TextDocument> as TextDocument);
@@ -107,8 +108,8 @@ function getHitColor(hits: number | null): string | undefined {
     return "red";
 }
 
-function getContentProvider(): ChangedContentProvider {
-    return scenario.get(TYPES.ChangedContentProvider);
+function getContentProvider(): MatchFileSystemProvider {
+    return scenario.get(TYPES.MatchFileSystemProvider);
 }
 
 function getCoverageDecorationProvider(): CoverageDecorationProvider {
@@ -120,7 +121,7 @@ function log(message: string): void {
     logger.log("Editor: " + message);
 }
 
-function transformRange(range: VscRange): Range {
+export function transformRange(range: VscRange): Range {
     return {
         start: {
             line: range.start.line,

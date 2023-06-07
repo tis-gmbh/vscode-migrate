@@ -9,12 +9,13 @@ export function progressRecords(): ProgressRecord[] {
     return getWindow().progressRecords;
 }
 
-export function notificationRecords(): MessageRecord[] {
-    return getWindow().notifications;
+export function message(criteria: Partial<MessageRecord>): Promise<MessageRecord> {
+    return getWindow().messageRecords.awaitEntryMatching(criteria);
 }
 
 export function treeUpdates(): Array<Array<string | undefined>> {
-    return getWindow().treeUpdates;
+    const updates = getWindow().treeUpdates["vscode-migrate.all-matches"];
+    return updates?.[updates.length - 1] || [];
 }
 
 export function getWindow(): WindowStub {

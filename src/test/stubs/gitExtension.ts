@@ -2,8 +2,9 @@ import { injectable } from "inversify";
 import { Extension, Uri } from "vscode";
 import { stringify } from "../../utils/uri";
 import { API, Change, GitExtension, Repository, Status } from "../../vcs/git";
+import { AwaitEntryArray } from "../utils/awaitEntryArray";
 
-export interface Commit {
+export interface CommitRecord {
     message: string;
     changes: Array<{
         uri: string;
@@ -13,7 +14,7 @@ export interface Commit {
 
 @injectable()
 export class GitExtensionStub implements Partial<Extension<GitExtension>> {
-    public commits: Commit[] = [];
+    public commitRecords = new AwaitEntryArray<CommitRecord>();
     private workingTreeChanges: Change[] = [];
     private scannedWorkingTreeChanges: Change[] = [];
 
@@ -52,13 +53,14 @@ export class GitExtensionStub implements Partial<Extension<GitExtension>> {
     }
 
     private createCommit(message: string): void {
-        this.commits.push({
+        const commitRecord: CommitRecord = {
             message,
             changes: this.workingTreeChanges.map(change => ({
                 uri: stringify(change.uri),
                 status: change.status === Status.MODIFIED ? "modified" : "added"
             }))
-        });
+        };
+        this.commitRecords.push(commitRecord);
     }
 
     public setModified(fileUri: Uri): void {
