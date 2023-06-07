@@ -1,37 +1,18 @@
-import { TreeItem, TreeItemLabel, Uri } from "vscode";
+import { TreeDataProvider, TreeItem, Uri } from "vscode";
 import { TYPES, VSC_TYPES } from "../../di/types";
 import { MatchManager } from "../../migration/matchManger";
-import { QueuedMatchesProvider } from "../../providers/queuedMatchesProvider";
 import { stringify } from "../../utils/uri";
 import { CommandsStub } from "../stubs/commands";
+import { TreeRecord, WindowStub } from "../stubs/window";
 
-export async function getDisplayedTree(): Promise<Record<string, string[]>> {
-    const children = await getTreeProvider().getChildren();
-    if (!children) return {};
-
-    const tree: Record<string, string[]> = {};
-    for (const element of children) {
-        const item = getTreeProvider().getTreeItem(element);
-        const childLabels = await getChildLabelsOf(element);
-
-        tree[stringifyLabel(item.label)] = childLabels;
-    }
-
-    return tree;
+export function getAllMatchesTree(): Promise<Record<string, string[]> | Error> {
+    const trees = getWindow().displayedTrees["vscode-migrate.all-matches"];
+    return Promise.resolve(trees?.[trees.length - 1] || {});
 }
 
-export async function getChildLabelsOf(treeElement: string): Promise<string[]> {
-    return (await getTreeItemsOf(treeElement))
-        .map(i => stringifyLabel(i.label));
-}
-
-export async function getTreeItemsOf(treeElement: string): Promise<TreeItem[]> {
-    const children = (await getTreeProvider().getChildren(treeElement)) || [];
-    return Promise.all(children.map(c => getTreeProvider().getTreeItem(c)));
-}
-
-export async function getTreeItemsOfUri(fileUri: Uri): Promise<TreeItem[]> {
-    return getTreeItemsOf(stringify(fileUri));
+export function getWellCoveredMatchesTree(): Promise<Record<string, string[]> | Error> {
+    const trees = getWindow().displayedTrees["vscode-migrate.well-covered-matches"];
+    return Promise.resolve(trees?.[trees.length - 1] || {});
 }
 
 export function getFirstMatch(): Uri {
@@ -49,17 +30,39 @@ export function clickTreeItem(item: TreeItem): any {
     return commandsStub.executeCommand(item.command!.command, ...item.command?.arguments || []);
 }
 
-function getTreeProvider(): QueuedMatchesProvider {
-    return scenario.get(TYPES.MatchesTreeProvider);
+function getWindow(): WindowStub {
+    return scenario.get(VSC_TYPES.VscWindow);
 }
 
 function getMatchManager(): MatchManager {
     return scenario.get(TYPES.MatchManager);
 }
 
-function stringifyLabel(label: string | TreeItemLabel | undefined): string {
-    if (typeof label === "string") {
-        return label;
-    }
-    return label?.label || "";
+async function getTreeItemsOf(treeElement: string): Promise<TreeItem[]> {
+    const children = (await getTreeItemProvider().getChildren(treeElement)) || [];
+    return Promise.all(children.map(c => getTreeItemProvider().getTreeItem(c)));
+}
+
+export function getTreeItemsOfUri(fileUri: Uri): Promise<TreeItem[]> {
+    return getTreeItemsOf(stringify(fileUri));
+}
+
+function getTreeItemProvider(): TreeDataProvider<string> {
+    return scenario.get(TYPES.AllMatchesTreeProvider);
+}
+
+export function allMatchesTree(criteria: Partial<TreeRecord>): Promise<TreeRecord> {
+    return getWindow().displayedTrees["vscode-migrate.all-matches"]!.awaitEntryMatching(criteria);
+}
+
+export function wellCoveredMatchesTree(criteria: Partial<TreeRecord>): Promise<TreeRecord> {
+    return getWindow().displayedTrees["vscode-migrate.well-covered-matches"]!.awaitEntryMatching(criteria);
+}
+
+export function allTreeUpdate(criteria: any[]): Promise<any[]> {
+    return getWindow().treeUpdates["vscode-migrate.all-matches"]!.awaitEntryMatching(criteria);
+}
+
+export function wellCoveredTreeUpdate(criteria: any[]): Promise<any[]> {
+    return getWindow().treeUpdates["vscode-migrate.well-covered-matches"]!.awaitEntryMatching(criteria);
 }

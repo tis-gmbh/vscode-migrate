@@ -20,7 +20,7 @@
           "onCommand:vscode-migrate.start-migration",
           "onCommand:vscode-migrate.show-change",
           "onCommand:vscode-migrate.debug-migration-script-process",
-          "onView:vscode-migrate.queued-matches",
+          "onView:vscode-migrate.all-matches",
           "onFileSystem:match"
      ],
      "main": "./dist/extension.js",
@@ -31,6 +31,11 @@
                     "title": "VSCode Migrate: Apply Change",
                     "icon": "$(check)",
                     "category": ""
+               },
+               {
+                    "command": "vscode-migrate.apply-well-covered-matches",
+                    "title": "VSCode Migrate: Apply Well Covered Changes",
+                    "icon": "doublecheck.svg"
                },
                {
                     "command": "vscode-migrate.start-migration",
@@ -60,6 +65,31 @@
                          "when": "isInDiffEditor && resourceScheme == match",
                          "group": "navigation"
                     }
+               ],
+               "view/title": [
+                    {
+                         "command": "vscode-migrate.apply-well-covered-matches",
+                         "when": "view == vscode-migrate.well-covered-matches && vscode-migrate.migrationRunning && vscode-migrate.hasWellCoveredMatches",
+                         "group": "navigation"
+                    }
+               ],
+               "commandPalette": [
+                    {
+                         "command": "vscode-migrate.apply-change",
+                         "when": "vscode-migrate.migrationRunning && resourceScheme == match"
+                    },
+                    {
+                         "command": "vscode-migrate.apply-well-covered-matches",
+                         "when": "vscode-migrate.migrationRunning && vscode-migrate.hasWellCoveredMatches"
+                    },
+                    {
+                         "command": "vscode-migrate.start-migration",
+                         "when": "!vscode-migrate.migrationRunning"
+                    },
+                    {
+                         "command": "vscode-migrate.stop-migration",
+                         "when": "vscode-migrate.migrationRunning"
+                    }
                ]
           },
           "viewsContainers": {
@@ -73,15 +103,29 @@
           },
           "viewsWelcome": [
                {
-                    "view": "vscode-migrate.queued-matches",
+                    "view": "vscode-migrate.well-covered-matches",
+                    "contents": "In order to use migrate changes, create a migration script in .vscode/migrations/ and then run the 'Start Migration' command or click this button.\n[Start Migration](command:vscode-migrate.start-migration)",
+                    "when": "!vscode-migrate.migrationRunning"
+               },
+               {
+                    "view": "vscode-migrate.well-covered-matches",
+                    "contents": "No well covered matches left. The view below shows the remaining, uncovered matches, we recommend you improve their coverage before applying them.",
+                    "when": "vscode-migrate.migrationRunning"
+               },
+               {
+                    "view": "vscode-migrate.all-matches",
                     "contents": "In order to use migrate changes, create a migration script in .vscode/migrations/ and then run the 'Start Migration' command or click this button.\n[Start Migration](command:vscode-migrate.start-migration)"
                }
           ],
           "views": {
                "migrate": [
                     {
-                         "id": "vscode-migrate.queued-matches",
-                         "name": "Matches"
+                         "id": "vscode-migrate.well-covered-matches",
+                         "name": "Well Covered Matches"
+                    },
+                    {
+                         "id": "vscode-migrate.all-matches",
+                         "name": "All Matches"
                     }
                ]
           }

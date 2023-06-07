@@ -1,6 +1,6 @@
 import { inject, injectable } from "inversify";
 import { EventEmitter } from "vscode";
-import { TYPES, VscWindow, VSC_TYPES } from "../di/types";
+import { TYPES, VSC_TYPES, VscCommands, VscWindow } from "../di/types";
 import { MigrationScriptProcessController } from "../migrationScriptProcessController";
 import { CommitInfo, MatchedFile } from "../migrationTypes";
 import { MigrationOutputChannel } from "./migrationOutputChannel";
@@ -13,14 +13,19 @@ export class MigrationHolderRemote {
     public constructor(
         @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow,
         @inject(TYPES.MigrationOutputChannel) private readonly outputChannel: MigrationOutputChannel,
-        @inject(TYPES.MigrationScriptProcessController) private readonly migrationProcess: MigrationScriptProcessController
+        @inject(TYPES.MigrationScriptProcessController) private readonly migrationProcess: MigrationScriptProcessController,
+        @inject(VSC_TYPES.VscCommands) private readonly commands: VscCommands
     ) {
-        this.migrationProcess.restartEvent(() => this.changeEmitter.fire());
+        this.migrationProcess.deathEvent(() => {
+            void this.commands.executeCommand("setContext", "vscode-migrate.migrationRunning", false);
+            this.changeEmitter.fire();
+        });
     }
 
     public async start(migrationName: string): Promise<void> {
         try {
             await this.migrationProcess.send("startMigration", migrationName);
+            await this.commands.executeCommand("setContext", "vscode-migrate.migrationRunning", true);
         } catch (error) {
             this.handleMigrationError(error);
             throw error;
@@ -30,6 +35,7 @@ export class MigrationHolderRemote {
 
     public async stop(): Promise<void> {
         await this.migrationProcess.send("stopMigration");
+        await this.commands.executeCommand("setContext", "vscode-migrate.migrationRunning", false);
         await this.migrationProcess.kill();
         this.changeEmitter.fire();
     }

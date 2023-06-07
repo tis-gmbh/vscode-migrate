@@ -53,7 +53,7 @@ export async function run(): Promise<void> {
     const mocha = new Mocha({
         ui: "tdd",
         color: true,
-        timeout: 30000,
+        timeout: 15000,
         slow: 4000
     });
 

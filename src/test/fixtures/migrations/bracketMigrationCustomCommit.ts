@@ -21,7 +21,7 @@ class BracketMigration implements IMigration {
 
     public getMatchesOf(filePath: string): Match[] {
         const content = readFileSync(filePath, { encoding: "utf-8" });
-        const regexMatches = content.matchAll(/>>>(.+)<<</g);
+        const regexMatches = content.matchAll(/>>>(.+?)<<</g);
         const matches: Match[] = [];
         for (const match of regexMatches) {
             const content = readFileSync(filePath, { encoding: "utf-8" });

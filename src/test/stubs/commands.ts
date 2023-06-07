@@ -1,9 +1,10 @@
 import { inject, injectable } from "inversify";
-import { commands, Disposable, Uri } from "vscode";
+import { Disposable, Uri, commands } from "vscode";
 import { VscCommands } from "../../di/types";
 import { stringify } from "../../utils/uri";
 import { Logger } from "../logger";
 import { TEST_TYPES } from "../types";
+import { AwaitEntryArray } from "../utils/awaitEntryArray";
 
 export interface CommandRecord {
     id: string,
@@ -18,7 +19,7 @@ export class CommandsStub implements VscCommands {
         callback: (...args: any[]) => any,
         thisArg?: any
     }> = new Map();
-    public readonly commandRecords: Array<CommandRecord> = [];
+    public readonly commandRecords = new AwaitEntryArray<CommandRecord>();
 
     public constructor(
         @inject(TEST_TYPES.Logger) private readonly logger: Logger

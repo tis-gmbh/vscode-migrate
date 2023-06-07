@@ -4,11 +4,13 @@ import { modules, vscCommands, vscModules } from "./di/inversify.config";
 import { TYPES } from "./di/types";
 import { VSCodeMigrate } from "./vscodeMigrate";
 
+const container = new Container();
 export function activate(context: ExtensionContext): void {
-    const container = new Container();
     container.load(modules, vscModules, vscCommands);
     const vsCodeMigrate = container.get<VSCodeMigrate>(TYPES.VscMigrate);
     void vsCodeMigrate.activate(context);
 }
 
-export function deactivate(): void { }
+export async function deactivate(): Promise<void> {
+    await container.unbindAllAsync();
+}

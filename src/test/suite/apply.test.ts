@@ -3,7 +3,6 @@ import { TYPES } from "../../di/types";
 import { MigrationScriptProcessController } from "../../migrationScriptProcessController";
 import { stringify, toFileUri } from "../../utils/uri";
 import { applyAllFor, applyChangesFor, commits } from "../utils/apply";
-import { commandRecords } from "../utils/commands";
 import { modifyContent } from "../utils/editor";
 import { actual, actualUri, expected } from "../utils/fs";
 import { getFirstMatch, getNthMatchUriOf } from "../utils/tree";
@@ -27,16 +26,6 @@ suite("Change Application", () => {
                 status: "modified",
             }]
         }]);
-
-        expect(commandRecords()).to.deep.include({
-            id: "vscode.diff",
-            args: [
-                stringify(toFileUri(secondMatch)),
-                stringify(secondMatch),
-                "main.ts: >>>Second match<<<"
-            ],
-            result: undefined
-        });
     });
 
     test("applies change that was manually modified", async () => {

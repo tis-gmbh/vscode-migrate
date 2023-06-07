@@ -1,8 +1,9 @@
 import { expect } from "chai";
 import { TYPES } from "../../di/types";
 import { MigrationScriptProcessController } from "../../migrationScriptProcessController";
-import { getDebugStarts, killProcess, startDebugging, stopMigration } from "../utils/process";
-import { getDisplayedTree } from "../utils/tree";
+import { commandRecord, commandRecords } from "../utils/commands";
+import { getDebugStarts, killProcess, startDebugging, startMigration, stopMigration } from "../utils/process";
+import { getAllMatchesTree } from "../utils/tree";
 
 suite("Migration Script Process", () => {
     test("can be debugged", async () => {
@@ -34,7 +35,7 @@ suite("Migration Script Process", () => {
 
         await killProcess();
 
-        const actualTree = await getDisplayedTree();
+        const actualTree = await getAllMatchesTree();
         const expectedTree = {};
         expect(actualTree).to.deep.equal(expectedTree);
     });
@@ -54,5 +55,45 @@ suite("Migration Script Process", () => {
 
     test("rejects command if migration script process dies", async () => {
         await expect(scenario.load("singleFile", "Lazy Suicidal")).to.eventually.be.rejectedWith("Migration Script Process died.");
+    });
+
+    test("starts another migration", async () => {
+        await scenario.load("singleFile", "Brackets");
+
+        await startMigration("Brackets");
+    });
+
+    test("sets context 'migrationRunning' to true on migration start", async () => {
+        await scenario.load("singleFile", "Brackets");
+
+        expect(commandRecords()).to.deep.contain({
+            id: "setContext",
+            args: ["vscode-migrate.migrationRunning", true],
+            result: undefined
+        });
+    });
+
+    test("sets context 'migrationRunning' to false on migration stop", async () => {
+        await scenario.load("singleFile", "Brackets");
+
+        await stopMigration();
+
+        expect(commandRecords()).to.deep.contain({
+            id: "setContext",
+            args: ["vscode-migrate.migrationRunning", false],
+            result: undefined
+        });
+    });
+
+    test("sets context 'migrationRunning' to false on migration script process death", async () => {
+        await scenario.load("singleFile", "Brackets");
+
+        await killProcess();
+
+        await expect(commandRecord({
+            id: "setContext",
+            args: ["vscode-migrate.migrationRunning", false],
+            result: undefined
+        })).to.eventually.exist;
     });
 });
