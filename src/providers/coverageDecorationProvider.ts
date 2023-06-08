@@ -1,7 +1,8 @@
 import { inject, injectable } from "inversify";
 import { LcovLine } from "lcov-parse";
 import { DecorationOptions, EventEmitter, Position, ProviderResult, Range, TextDocument, TextEditor, ThemableDecorationAttachmentRenderOptions } from "vscode";
-import { TYPES, VscWindow, VSC_TYPES } from "../di/types";
+import { TYPES, VSC_TYPES, VscWindow } from "../di/types";
+import { MigrationOutputChannel } from "../migration/migrationOutputChannel";
 import { stringify } from "../utils/uri";
 import { CoverageProvider } from "./coverageProvider";
 import { TextDecorationProvider } from "./textDecorationProvider";
@@ -14,8 +15,10 @@ export class CoverageDecorationProvider implements TextDecorationProvider {
 
     public constructor(
         @inject(TYPES.CoverageProvider) private readonly coverageProvider: CoverageProvider,
-        @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow
+        @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow,
+        @inject(TYPES.MigrationOutputChannel) private readonly outputChannel: MigrationOutputChannel,
     ) {
+        this.outputChannel.append("CoverageDecorationProvider created\n");
         this.coverageProvider.onCoverageChanged(this.onCoverageChanged, this);
     }
 
@@ -23,6 +26,7 @@ export class CoverageDecorationProvider implements TextDecorationProvider {
         const changedEditors = this.window.visibleTextEditors.filter(
             editor => changedFiles?.includes(stringify(editor.document.uri))
         );
+        this.outputChannel.append(`Coverage changed for editors with uri ${changedEditors.map(editor => stringify(editor.document.uri))}\n`);
         this._onDecorationsChanged.fire(changedEditors);
     }
 

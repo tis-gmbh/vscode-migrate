@@ -41,6 +41,7 @@ export class CoverageProvider {
 
         const files = await this.workspace.findFiles(this.coveragePattern);
         if (files[0]) {
+            this.outputChannel.append(`Initial coverage file found: ${files[0].fsPath}\n`);
             await this.updateCoverageUsing(files[0]);
         } else {
             this.showNoCoverageInfo();
