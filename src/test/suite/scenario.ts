@@ -57,16 +57,17 @@ export class Scenario {
     } as Partial<ExtensionContext> as ExtensionContext;
 
     public constructor() {
+        this.container.load(modules, vscStubs, vscCommands, testModule);
     }
 
     public async load(name: ScenarioName, migrationName?: MigrationName): Promise<void> {
+        this.log(`Loading scenario ${name} and migration ${migrationName}`);
         this.name = name;
 
         emptyDirSync(testWorkspacePath);
         await cp(originalPath(), testWorkspacePath, { recursive: true });
         await cp(migrationsPath, join(testWorkspacePath, ".vscode/migrations"), { recursive: true });
 
-        this.container.load(modules, vscStubs, vscCommands, testModule);
         this.vsCodeMigrate = this.container.get(TYPES.VscMigrate);
         this.vsCodeMigrate.activate(scenario.extensionContext);
         if (migrationName) {
