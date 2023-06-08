@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import * as glob from "glob";
-import { join } from "path";
+import { basename, join } from "path";
 import { IMigration, Match, MatchedFile } from "./migrationTypes";
 
 @Migration({
@@ -10,7 +10,8 @@ class BracketMigration implements IMigration {
     public getMatchedFiles(): MatchedFile[] {
         const originalPath = join(__dirname, "../../", "**/*.ts");
         const globPath = originalPath.replace(/\\/g, "/");
-        const files = glob.sync(globPath);
+        let files = glob.sync(globPath);
+        files = files.sort((a, b) => basename(a).localeCompare(basename(b)));
         return files.map(file => {
             return {
                 path: file,

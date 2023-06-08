@@ -1,5 +1,5 @@
 import { inject, injectable } from "inversify";
-import { CancellationToken, Disposable, MessageOptions, OutputChannel, Progress, ProgressOptions, TreeDataProvider, TreeItem, TreeItemLabel, window } from "vscode";
+import { CancellationToken, Disposable, LogOutputChannel, MessageOptions, OutputChannel, Progress, ProgressOptions, TreeDataProvider, TreeItem, TreeItemLabel, window } from "vscode";
 import { VscWindow } from "../../di/types";
 import { Logger } from "../logger";
 import { TEST_TYPES } from "../types";
@@ -43,7 +43,7 @@ export class WindowStub implements VscWindow {
         };
     }
 
-    public createOutputChannel(name: string): OutputChannel {
+    public createOutputChannel(name: string): LogOutputChannel {
         const append = (value: string): void => {
             this.logger.log(name + " (append): " + value);
         };
@@ -57,7 +57,7 @@ export class WindowStub implements VscWindow {
             show: (): void => { },
             hide: (): void => { },
             dispose: (): void => { }
-        };
+        } as OutputChannel as LogOutputChannel;
     }
 
     public async withProgress<R>(_options: ProgressOptions, task: (progress: Progress<{ message?: string; increment?: number }>, token: CancellationToken) => Thenable<R>): Promise<R> {

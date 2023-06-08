@@ -1,4 +1,5 @@
-import { copySync, emptyDirSync } from "fs-extra";
+import { emptyDirSync } from "fs-extra";
+import { cp } from "fs/promises";
 import { Container } from "inversify";
 import { join } from "path";
 import { DecorationInstanceRenderOptions, ExtensionContext } from "vscode";
@@ -62,8 +63,8 @@ export class Scenario {
         this.name = name;
 
         emptyDirSync(testWorkspacePath);
-        copySync(originalPath(), testWorkspacePath, { recursive: true });
-        copySync(migrationsPath, join(testWorkspacePath, ".vscode/migrations"));
+        await cp(originalPath(), testWorkspacePath, { recursive: true });
+        await cp(migrationsPath, join(testWorkspacePath, ".vscode/migrations"), { recursive: true });
 
         this.container.load(modules, vscStubs, vscCommands, testModule);
         this.vsCodeMigrate = this.container.get(TYPES.VscMigrate);
