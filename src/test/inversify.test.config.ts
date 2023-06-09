@@ -8,6 +8,7 @@ import { GitExtensionStub } from "./stubs/gitExtension";
 import { WindowStub } from "./stubs/window";
 import { WorkspaceStub } from "./stubs/workspace";
 import { TEST_TYPES } from "./types";
+import { CoverageDecorationsObserver } from "./utils/coverageDecorations";
 
 export const vscStubs = new ContainerModule(bind => {
     bind(VSC_TYPES.VscCommands).to(CommandsStub).inSingletonScope();
@@ -20,4 +21,5 @@ export const vscStubs = new ContainerModule(bind => {
 export const testModule = new ContainerModule(bind => {
     bind(TEST_TYPES.GitExtension).to(GitExtensionStub).inSingletonScope();
     bind(TEST_TYPES.Logger).to(Logger).inSingletonScope();
+    bind(TEST_TYPES.CoverageDecorationsObserver).to(CoverageDecorationsObserver).inSingletonScope();
 });

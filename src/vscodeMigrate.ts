@@ -9,7 +9,6 @@ import { TextDecorationConsumer } from "./providers/textDecorationConsumer";
 @injectable()
 export class VSCodeMigrate {
     public constructor(
-        @inject(TYPES.CommandManager) private readonly cmdManager: CommandManager,
         @inject(VSC_TYPES.VscWorkspace) private readonly workspace: VscWorkspace,
         @inject(VSC_TYPES.VscWindow) private readonly window: VscWindow,
         @inject(TYPES.MatchManager) public readonly matchManager: MatchManager,
@@ -17,7 +16,8 @@ export class VSCodeMigrate {
         @inject(TYPES.WellCoveredMatchesTreeProvider) public readonly wellCoveredMatchesProvider: TreeDataProvider<string>,
         @inject(TYPES.MatchFileSystemProvider) public readonly matchReplacementProvider: FileSystemProvider,
         @inject(TYPES.TextDecorationConsumer) private readonly textDecorationConsumer: TextDecorationConsumer,
-        @inject(TYPES.CoverageDecorationProvider) public readonly coverageDecorationProvider: CoverageDecorationProvider
+        @inject(TYPES.CoverageDecorationProvider) public readonly coverageDecorationProvider: CoverageDecorationProvider,
+        @inject(TYPES.CommandManager) private readonly cmdManager: CommandManager
     ) { }
 
     public activate(context: ExtensionContext): void {

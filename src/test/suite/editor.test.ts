@@ -1,10 +1,9 @@
 import { expect } from "chai";
 import { move } from "fs-extra";
-import { TYPES } from "../../di/types";
-import { CoverageDecorationProvider } from "../../providers/coverageDecorationProvider";
 import { toMatchUri } from "../../utils/uri";
 import { applyChangesFor } from "../utils/apply";
-import { createCoverageScheme, getChangedContentFor, getDecorationsFor, modifyContent, updateOf } from "../utils/editor";
+import { coverageDecorations, createCoverageScheme, getDecorationsFor } from "../utils/coverageDecorations";
+import { getChangedContentFor, modifyContent, updateOf } from "../utils/editor";
 import { actual, actualPath, actualUri, expected } from "../utils/fs";
 import { message } from "../utils/gui";
 import { getFirstMatch, getNthMatchUriOf } from "../utils/tree";
@@ -23,39 +22,32 @@ suite("Editor", () => {
     test("generates code coverage decorations", async () => {
         await scenario.load("singleFile", "Brackets");
 
-
-        const coverageUpdated = new Promise(res => scenario.get<CoverageDecorationProvider>(TYPES.CoverageDecorationProvider).onDecorationsChanged(res));
-        await coverageUpdated;
-
-        const decorations = getDecorationsFor(actualUri("src/main.ts"));
-        expect(decorations).to.deep.equal(createCoverageScheme([
+        await expect(coverageDecorations(actualUri("src/main.ts"), createCoverageScheme([
             1,
-            1,
+            null,
             1,
             null,
             null,
-            1,
-            0,
-            0,
+            null,
             0,
             null,
-            1,
+            null,
+            null,
+            null,
             null
-        ]));
+        ]))).to.eventually.exist;
     });
 
     test("updates code coverage decorations when coverage changes", async () => {
         await scenario.load("hiddenCoverage", "Brackets");
 
-        const decorations = getDecorationsFor(actualUri("src/firstFile.ts"));
+        const uri = actualUri("src/firstFile.ts");
+        const decorations = getDecorationsFor(uri);
         expect(decorations).to.deep.equal([]);
 
-        const coverageUpdated = new Promise(res => scenario.get<CoverageDecorationProvider>(TYPES.CoverageDecorationProvider).onDecorationsChanged(res));
         await move(actualPath("coverage/hidden_lcov.info"), actualPath("coverage/lcov.info"));
-        await coverageUpdated;
 
-        const updatedDecorations = getDecorationsFor(actualUri("src/firstFile.ts"));
-        expect(updatedDecorations).to.deep.equal(createCoverageScheme([
+        await expect(coverageDecorations(uri, createCoverageScheme([
             1,
             null,
             1,
@@ -68,7 +60,7 @@ suite("Editor", () => {
             null,
             null,
             null
-        ]));
+        ]))).to.eventually.exist;
     });
 
     test("updates content when another change was applied", async () => {

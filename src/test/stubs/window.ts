@@ -23,7 +23,7 @@ export class WindowStub implements VscWindow {
     public nextQuickPickOption?: string = undefined;
 
     public constructor(
-        @inject(TEST_TYPES.Logger) private readonly logger: Logger
+        @inject(TEST_TYPES.Logger) private readonly logger: Logger,
     ) { }
 
     private createMessageLogger<N extends "showInformationMessage" | "showErrorMessage" | "showWarningMessage">(original: N): VscWindow[N] {
