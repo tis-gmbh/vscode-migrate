@@ -10,7 +10,7 @@ import { TextDecorationProvider } from "./textDecorationProvider";
 @injectable()
 export class CoverageDecorationProvider implements TextDecorationProvider {
     public readonly decorationType = this.window.createTextEditorDecorationType({});
-    private readonly _onDecorationsChanged = new EventEmitter<TextEditor[]>();
+    private readonly _onDecorationsChanged = new EventEmitter<readonly TextEditor[]>();
     public readonly onDecorationsChanged = this._onDecorationsChanged.event;
 
     public constructor(
@@ -23,11 +23,16 @@ export class CoverageDecorationProvider implements TextDecorationProvider {
     }
 
     private onCoverageChanged(changedFiles: string[] | undefined): void {
-        const changedEditors = this.window.visibleTextEditors.filter(
-            editor => changedFiles?.includes(stringify(editor.document.uri))
+        const getAffectedEditors = this.getAffectedEditors(changedFiles);
+        this.outputChannel.append(`Coverage changed for editors with uri ${getAffectedEditors.map(editor => stringify(editor.document.uri))}\n`);
+        this._onDecorationsChanged.fire(getAffectedEditors);
+    }
+
+    private getAffectedEditors(changedFiles: string[] | undefined): readonly TextEditor[] {
+        if (!changedFiles) return this.window.visibleTextEditors;
+        return this.window.visibleTextEditors.filter(
+            editor => changedFiles.includes(stringify(editor.document.uri))
         );
-        this.outputChannel.append(`Coverage changed for editors with uri ${changedEditors.map(editor => stringify(editor.document.uri))}\n`);
-        this._onDecorationsChanged.fire(changedEditors);
     }
 
     public getDecorations(editor: TextEditor): ProviderResult<DecorationOptions[]> {

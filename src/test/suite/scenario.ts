@@ -2,7 +2,7 @@ import { emptyDirSync } from "fs-extra";
 import { cp } from "fs/promises";
 import { Container } from "inversify";
 import { join } from "path";
-import { DecorationInstanceRenderOptions, ExtensionContext } from "vscode";
+import { ExtensionContext } from "vscode";
 import { modules, vscCommands } from "../../di/inversify.config";
 import { TYPES, VSC_TYPES } from "../../di/types";
 import { VSCodeMigrate } from "../../vscodeMigrate";
@@ -13,21 +13,7 @@ import { migrationsPath, originalPath, testWorkspacePath } from "../utils/fs";
 import { startMigration } from "../utils/process";
 
 type ValueOf<T> = T[keyof T];
-
-interface Position {
-    line: number;
-    character: number;
-}
-
-interface Range {
-    start: Position;
-    end: Position;
-}
-
-export interface Decoration {
-    range: Range
-    options?: DecorationInstanceRenderOptions;
-}
+type ConstructorType<T> = new (...args: any[]) => T;
 
 type ScenarioName = "applyWhileEdit"
     | "conflict"
@@ -79,6 +65,7 @@ export class Scenario {
         module: ValueOf<typeof TYPES>
             | ValueOf<typeof VSC_TYPES>
             | ValueOf<typeof TEST_TYPES>
+            | ConstructorType<C>
     ): C {
         return this.container.get<C>(module);
     }
