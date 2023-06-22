@@ -1,5 +1,6 @@
 import { inject, injectable } from "inversify";
-import { ProgressLocation, Uri } from "vscode";
+import { Progress, ProgressLocation, Uri } from "vscode";
+import { ApplyQueue } from "../applyQueue";
 import { TYPES, VSC_TYPES, VscCommands, VscWindow, VscWorkspace } from "../di/types";
 import { MergeService } from "../mergeService";
 import { MatchManager } from "../migration/matchManger";
@@ -8,6 +9,7 @@ import { CoverageProvider } from "../providers/coverageProvider";
 import { MatchCoverageFilter } from "../providers/matchCoverageFilter";
 import { MatchFileSystemProvider } from "../providers/matchFileSystemProvider";
 import { NonEmptyArray } from "../utilTypes";
+import { stringify } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
 import { ApplyCommand } from "./applyCommand";
 import { Command } from "./command";
@@ -26,22 +28,45 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote,
         @inject(TYPES.CoverageProvider) protected readonly coverageProvider: CoverageProvider,
         @inject(TYPES.MergeService) protected readonly mergeService: MergeService,
-        @inject(TYPES.MatchCoverageFilter) protected readonly matchCoverageFilter: MatchCoverageFilter
+        @inject(TYPES.MatchCoverageFilter) protected readonly matchCoverageFilter: MatchCoverageFilter,
+        @inject(TYPES.ApplyQueue) private readonly queue: ApplyQueue,
     ) {
         super();
     }
 
     public async execute(): Promise<void> {
-        await this.applyChangesWithProgress();
-        await this.checkMigrationDone();
+        const filesWithCoveredMatches = await this.matchCoverageFilter.getQueuedFiles();
+        let matches: Uri[] = [];
+        for (const file of filesWithCoveredMatches) {
+            matches = matches.concat(await this.applyMatchesInFile(file));
+        }
+
+        matches.forEach((match) => this.queue.push(stringify(match)));
+        try {
+            await this.applyChangesWithProgress(matches);
+            await this.checkMigrationDone();
+        } finally {
+            matches.forEach((match) => this.queue.remove(stringify(match)));
+            if (this.queue.isEmpty()) {
+                this.queue.lastExecution = undefined;
+            }
+        }
     }
 
-    private applyChangesWithProgress(): Thenable<void> {
-        const applyChanges = async (): Promise<void> => {
+    private applyChangesWithProgress(matches: Uri[]): Thenable<void> {
+        const applyChanges = async (progress: Progress<{ message: string }>): Promise<void> => {
+            const previousExecution = this.queue.lastExecution;
+            if (previousExecution) {
+                progress.report({ message: "Waiting for previous execution" });
+                await this.waitForPreviousExecution(previousExecution);
+            }
             try {
-                await this.applyMatches();
+                progress.report({ message: "Running verification tasks" });
+                await this.migrationHolder.verify();
+                await this.applyMatches(matches);
             } catch (error) {
                 this.handleApplyError(error);
+                this.queue.lastExecution = undefined;
                 throw error;
             }
         };
@@ -49,16 +74,19 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         return this.window.withProgress({
             title: `Applying Well Covered Changes`,
             location: ProgressLocation.Notification
-        }, () => applyChanges());
+        }, progress => this.queue.lastExecution = applyChanges(progress));
     }
 
-    private async applyMatches(): Promise<void> {
-        const filesWithCoveredMatches = await this.matchCoverageFilter.getQueuedFiles();
-        let matches: Uri[] = [];
-        for (const file of filesWithCoveredMatches) {
-            matches = matches.concat(await this.applyMatchesInFile(file));
+    private async waitForPreviousExecution(previousExecution: Thenable<void>): Promise<void> {
+        try {
+            await previousExecution;
+        } catch (error) {
+            void this.window.showErrorMessage(`Changes were not applied because the previous application failed.`);
+            throw error;
         }
+    }
 
+    private async applyMatches(matches: Uri[]): Promise<void> {
         await this.workspace.saveAll();
         await this.versionControl.stageAll();
         await this.versionControl.commit(`Batch application of ${matches.length} well covered matches for migration 'Brackets'`);

@@ -56,9 +56,9 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
 
     private applyChangesWithProgress(matchUri: Uri): Thenable<void> {
         const match = this.matchManager.byMatchUriOrThrow(matchUri);
-        const previousExecution = this.queue.lastExecution;
 
         const applyChanges = async (progress: Progress<{ message: string }>): Promise<void> => {
+            const previousExecution = this.queue.lastExecution;
             if (previousExecution) {
                 progress.report({ message: "Waiting for previous execution" });
                 await this.waitForPreviousExecution(previousExecution, matchUri);

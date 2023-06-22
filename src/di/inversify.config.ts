@@ -46,8 +46,8 @@ export const modules = new ContainerModule(bind => {
     bind(TYPES.MigrationStdOutChannel).to(MigrationStdOutChannel).inSingletonScope();
     bind(TYPES.CoverageProvider).to(CoverageProvider).inSingletonScope();
     bind(TYPES.MergeService).to(MergeService).inSingletonScope();
-    bind(TYPES.MatchCoverageFilter).to(MatchCoverageFilter);
-    bind(TYPES.ApplyQueue).to(ApplyQueue);
+    bind(TYPES.MatchCoverageFilter).to(MatchCoverageFilter).inSingletonScope();
+    bind(TYPES.ApplyQueue).to(ApplyQueue).inSingletonScope();
 });
 
 export const vscCommands = new ContainerModule(bind => {

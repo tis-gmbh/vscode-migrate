@@ -6,7 +6,7 @@ import { IMigration, Match, MatchedFile } from "./migrationTypes";
 @Migration({
     name: "Brackets"
 })
-class BracketMigration implements IMigration {
+export class BracketMigration implements IMigration {
     public getMatchedFiles(): MatchedFile[] {
         const originalPath = join(__dirname, "../../", "**/*.ts");
         const globPath = originalPath.replace(/\\/g, "/");

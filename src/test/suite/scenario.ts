@@ -30,6 +30,7 @@ type ScenarioName = "applyWhileEdit"
 type MigrationName = "Brackets"
     | "Brackets - Custom Commit Message"
     | "Brackets - Whole File As Single Change"
+    | "Brackets - Never Resolve Verify"
     | "Lazy Suicidal"
     | "Suicidal";
 
@@ -68,6 +69,10 @@ export class Scenario {
             | ConstructorType<C>
     ): C {
         return this.container.get<C>(module);
+    }
+
+    public rebind(key: symbol, value: any): void {
+        this.container.rebind(key).toConstantValue(value);
     }
 
     public getLogDumper(fileName: string): () => void {

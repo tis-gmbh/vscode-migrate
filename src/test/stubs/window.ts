@@ -61,17 +61,16 @@ export class WindowStub implements VscWindow {
     }
 
     public async withProgress<R>(_options: ProgressOptions, task: (progress: Progress<{ message?: string; increment?: number }>, token: CancellationToken) => Thenable<R>): Promise<R> {
-        const record: ProgressRecord = {
-            messages: [],
-            done: false
-        };
-
-        this.progressRecords.push(record);
+        const messages = [] as string[];
 
         const result = await task({
             report: (update): void => {
                 this.logger.log("Progress update: " + JSON.stringify(update, null, 2));
-                record.messages.push(update.message!);
+                messages.push(update.message!);
+                this.progressRecords.push({
+                    messages: Array.from(messages),
+                    done: false
+                });
             }
         }, {
             isCancellationRequested: false,
@@ -79,7 +78,10 @@ export class WindowStub implements VscWindow {
                 return new Disposable(() => { });
             }
         });
-        record.done = true;
+        this.progressRecords.push({
+            messages: Array.from(messages),
+            done: true
+        });
         return result;
     }
 
@@ -153,7 +155,7 @@ function stringifyLabel(label: string | TreeItemLabel | undefined): string {
 }
 
 export interface ProgressRecord {
-    messages: string[]
+    messages: string[];
     done: boolean;
 }
 

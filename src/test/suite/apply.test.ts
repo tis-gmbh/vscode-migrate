@@ -7,7 +7,7 @@ import { applyAllFor, applyChangesFor, applyWellCoveredMatches, commits } from "
 import { modifyContent } from "../utils/editor";
 import { actual, actualUri, expected } from "../utils/fs";
 import { progress, progressRecords } from "../utils/gui";
-import { getFirstMatch, getNthMatchUriOf } from "../utils/tree";
+import { getFirstMatch, getNthMatchUriOf, wellCoveredMatchesTree } from "../utils/tree";
 import { setModified, setUntracked } from "../utils/vcs";
 
 suite.only("Change Application", () => {
@@ -128,22 +128,33 @@ suite.only("Change Application", () => {
         }))).to.have.lengthOf(2);
     });
 
-    test.skip("shows queue notification if another match is applied when the previous application of well applied matches isn't done yet", async () => {
-        await scenario.load("twoFile", "Brackets");
+    test("shows queue notification if another match is applied when the previous application of well applied matches isn't done yet", async () => {
+        await scenario.load("covered", "Brackets - Never Resolve Verify");
 
-        await Promise.all([
-            applyWellCoveredMatches(),
-            applyChangesFor(getNthMatchUriOf(actualUri("src/secondFile.ts"), 1))
-        ]);
+        const expectedTree = {
+            "firstFile.ts": [
+                `>>>First match<<<`
+            ],
+            "secondFile.ts": [
+                `>>>Second file match<<<`
+            ]
+        };
+        await wellCoveredMatchesTree(expectedTree);
+
+        void applyWellCoveredMatches();
+
+        await progress({
+            messages: [
+                "Running verification tasks"
+            ]
+        });
+
+        void applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 2));
 
         await expect(progress({
             messages: [
-                "Waiting for previous execution",
-                "Saving File",
-                "Running verification tasks",
-                "Committing file"
-            ],
-            done: true
+                "Waiting for previous execution"
+            ]
         })).to.eventually.exist;
     });
 });
