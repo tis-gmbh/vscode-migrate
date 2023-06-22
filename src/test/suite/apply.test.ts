@@ -2,14 +2,14 @@ import { expect } from "chai";
 import { TYPES } from "../../di/types";
 import { MigrationScriptProcessController } from "../../migrationScriptProcessController";
 import { stringify, toFileUri } from "../../utils/uri";
-import { applyAllFor, applyChangesFor, commits } from "../utils/apply";
+import { applyAllFor, applyChangesFor, applyWellCoveredMatches, commits } from "../utils/apply";
 import { modifyContent } from "../utils/editor";
 import { actual, actualUri, expected } from "../utils/fs";
 import { progress } from "../utils/gui";
 import { getFirstMatch, getNthMatchUriOf } from "../utils/tree";
 import { setModified, setUntracked } from "../utils/vcs";
 
-suite("Change Application", () => {
+suite.only("Change Application", () => {
     test("applies a change", async () => {
         await scenario.load("singleFile", "Brackets");
         const firstMatch = getFirstMatch()!;
@@ -92,12 +92,31 @@ suite("Change Application", () => {
         expect(migrationScriptProcess.isRunning).to.be.false;
     });
 
-    test("shows queue length notification if another match is applied while on application isn't done yet", async () => {
+    test("shows queue notification if another match is applied when the previous application isn't done yet", async () => {
         await scenario.load("twoFile", "Brackets");
 
         await Promise.all([
             applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 1)),
             applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 2))
+        ]);
+
+        await expect(progress({
+            messages: [
+                "Waiting for previous execution",
+                "Saving File",
+                "Running verification tasks",
+                "Committing file"
+            ],
+            done: true
+        })).to.eventually.exist;
+    });
+
+    test("shows queue notification if another match is applied when the previous application of well applied matches isn't done yet", async () => {
+        await scenario.load("twoFile", "Brackets");
+
+        await Promise.all([
+            applyWellCoveredMatches(),
+            applyChangesFor(getNthMatchUriOf(actualUri("src/secondFile.ts"), 1))
         ]);
 
         await expect(progress({
