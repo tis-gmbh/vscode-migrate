@@ -5,6 +5,7 @@ import { stringify, toFileUri } from "../../utils/uri";
 import { applyAllFor, applyChangesFor, commits } from "../utils/apply";
 import { modifyContent } from "../utils/editor";
 import { actual, actualUri, expected } from "../utils/fs";
+import { progress } from "../utils/gui";
 import { getFirstMatch, getNthMatchUriOf } from "../utils/tree";
 import { setModified, setUntracked } from "../utils/vcs";
 
@@ -89,5 +90,24 @@ suite("Change Application", () => {
 
         const migrationScriptProcess = scenario.get<MigrationScriptProcessController>(TYPES.MigrationScriptProcessController);
         expect(migrationScriptProcess.isRunning).to.be.false;
+    });
+
+    test("shows queue length notification if another match is applied while on application isn't done yet", async () => {
+        await scenario.load("twoFile", "Brackets");
+
+        await Promise.all([
+            applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 1)),
+            applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 2))
+        ]);
+
+        await expect(progress({
+            messages: [
+                "Waiting for previous execution",
+                "Saving File",
+                "Running verification tasks",
+                "Committing file"
+            ],
+            done: true
+        })).to.eventually.exist;
     });
 });

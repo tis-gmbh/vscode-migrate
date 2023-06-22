@@ -13,6 +13,10 @@ export function message(criteria: Partial<MessageRecord>): Promise<MessageRecord
     return getWindow().messageRecords.awaitEntryMatching(criteria);
 }
 
+export function progress(criteria: Partial<ProgressRecord>): Promise<ProgressRecord> {
+    return getWindow().progressRecords.awaitEntryMatching(criteria);
+}
+
 export function treeUpdates(): Array<Array<string | undefined>> {
     const updates = getWindow().treeUpdates["vscode-migrate.all-matches"];
     return updates?.[updates.length - 1] || [];
