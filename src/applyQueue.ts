@@ -19,4 +19,8 @@ export class ApplyQueue {
     public includes(value: string): boolean {
         return this.queue.includes(value);
     }
+
+    public isEmpty(): boolean {
+        return this.queue.length === 0;
+    }
 }

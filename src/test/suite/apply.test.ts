@@ -1,11 +1,12 @@
 import { expect } from "chai";
 import { TYPES } from "../../di/types";
 import { MigrationScriptProcessController } from "../../migrationScriptProcessController";
+import { matches } from "../../utils/matches";
 import { stringify, toFileUri } from "../../utils/uri";
 import { applyAllFor, applyChangesFor, applyWellCoveredMatches, commits } from "../utils/apply";
 import { modifyContent } from "../utils/editor";
 import { actual, actualUri, expected } from "../utils/fs";
-import { progress } from "../utils/gui";
+import { progress, progressRecords } from "../utils/gui";
 import { getFirstMatch, getNthMatchUriOf } from "../utils/tree";
 import { setModified, setUntracked } from "../utils/vcs";
 
@@ -109,6 +110,22 @@ suite.only("Change Application", () => {
             ],
             done: true
         })).to.eventually.exist;
+    });
+
+    test("does not show queue notification if another match is applied when the previous application is already done", async () => {
+        await scenario.load("twoFile", "Brackets");
+
+        await applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 1));
+        await applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 2));
+
+        expect(progressRecords().filter(record => matches(record, {
+            messages: [
+                "Saving File",
+                "Running verification tasks",
+                "Committing file"
+            ],
+            done: true
+        }))).to.have.lengthOf(2);
     });
 
     test.skip("shows queue notification if another match is applied when the previous application of well applied matches isn't done yet", async () => {

@@ -41,6 +41,9 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
             await this.checkMigrationDone();
         } finally {
             this.queue.remove(stringifiedUri);
+            if (this.queue.isEmpty()) {
+                this.queue.lastExecution = undefined;
+            }
         }
     }
 
