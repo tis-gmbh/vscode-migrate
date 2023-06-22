@@ -1,6 +1,7 @@
 import { ContainerModule } from "inversify";
 import "reflect-metadata";
 import { commands, debug, extensions, window, workspace } from "vscode";
+import { ApplyQueue } from "../applyQueue";
 import { ApplyChangeCommand } from "../command/applyChangeCommand";
 import { ApplyWellCoveredChangesCommand } from "../command/applyWellCoveredChangesCommand";
 import { CommandManager } from "../command/commandManager";
@@ -46,6 +47,7 @@ export const modules = new ContainerModule(bind => {
     bind(TYPES.CoverageProvider).to(CoverageProvider).inSingletonScope();
     bind(TYPES.MergeService).to(MergeService).inSingletonScope();
     bind(TYPES.MatchCoverageFilter).to(MatchCoverageFilter);
+    bind(TYPES.ApplyQueue).to(ApplyQueue);
 });
 
 export const vscCommands = new ContainerModule(bind => {

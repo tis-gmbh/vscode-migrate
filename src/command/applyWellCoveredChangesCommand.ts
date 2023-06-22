@@ -9,10 +9,11 @@ import { MatchCoverageFilter } from "../providers/matchCoverageFilter";
 import { MatchFileSystemProvider } from "../providers/matchFileSystemProvider";
 import { NonEmptyArray } from "../utilTypes";
 import { VersionControl } from "../vcs/versionControl";
+import { ApplyCommand } from "./applyCommand";
 import { Command } from "./command";
 
 @injectable()
-export class ApplyWellCoveredChangesCommand implements Command {
+export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Command {
     public readonly id = "vscode-migrate.apply-well-covered-matches";
 
     public constructor(
@@ -27,6 +28,7 @@ export class ApplyWellCoveredChangesCommand implements Command {
         @inject(TYPES.MergeService) protected readonly mergeService: MergeService,
         @inject(TYPES.MatchCoverageFilter) protected readonly matchCoverageFilter: MatchCoverageFilter
     ) {
+        super();
     }
 
     public async execute(): Promise<void> {

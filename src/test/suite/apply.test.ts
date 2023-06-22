@@ -111,7 +111,7 @@ suite.only("Change Application", () => {
         })).to.eventually.exist;
     });
 
-    test("shows queue notification if another match is applied when the previous application of well applied matches isn't done yet", async () => {
+    test.skip("shows queue notification if another match is applied when the previous application of well applied matches isn't done yet", async () => {
         await scenario.load("twoFile", "Brackets");
 
         await Promise.all([

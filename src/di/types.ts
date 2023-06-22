@@ -19,7 +19,8 @@ export const TYPES = {
     MigrationScriptProcessController: Symbol.for("MigrationScriptProcessController"),
     MigrationStdOutChannel: Symbol.for("MigrationStdOutChannel"),
     MergeService: Symbol.for("MergeService"),
-    MatchCoverageFilter: Symbol.for("MatchCoverageFilter")
+    MatchCoverageFilter: Symbol.for("MatchCoverageFilter"),
+    ApplyQueue: Symbol.for("ApplyQueue")
 };
 
 export const VSC_TYPES = {

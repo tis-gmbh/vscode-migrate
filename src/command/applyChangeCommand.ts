@@ -1,17 +1,17 @@
 import { inject, injectable } from "inversify";
 import { FileSystemProvider, Progress, ProgressLocation, Uri } from "vscode";
+import { ApplyQueue } from "../applyQueue";
 import { TYPES, VSC_TYPES, VscCommands, VscWindow, VscWorkspace } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { stringify, toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
+import { ApplyCommand } from "./applyCommand";
 import { Command } from "./command";
 
 @injectable()
-export class ApplyChangeCommand implements Command {
+export class ApplyChangeCommand extends ApplyCommand implements Command {
     public readonly id = "vscode-migrate.apply-change";
-    private lastExecution?: Thenable<void>;
-    private readonly queue: string[] = [];
 
     public constructor(
         @inject(TYPES.MatchFileSystemProvider) protected readonly changedContentProvider: FileSystemProvider,
@@ -20,8 +20,11 @@ export class ApplyChangeCommand implements Command {
         @inject(TYPES.MatchManager) protected readonly matchManager: MatchManager,
         @inject(VSC_TYPES.VscCommands) protected readonly commands: VscCommands,
         @inject(TYPES.VersionControl) protected readonly versionControl: VersionControl,
-        @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote
-    ) { }
+        @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote,
+        @inject(TYPES.ApplyQueue) private readonly queue: ApplyQueue,
+    ) {
+        super();
+    }
 
     public async execute(matchUri: Uri): Promise<void> {
         const stringifiedUri = stringify(matchUri);
@@ -37,10 +40,7 @@ export class ApplyChangeCommand implements Command {
             await this.applyChangesWithProgress(matchUri);
             await this.checkMigrationDone();
         } finally {
-            const index = this.queue.indexOf(stringifiedUri);
-            if (index > -1) {
-                this.queue.splice(index, 1);
-            }
+            this.queue.remove(stringifiedUri);
         }
     }
 
@@ -53,7 +53,7 @@ export class ApplyChangeCommand implements Command {
 
     private applyChangesWithProgress(matchUri: Uri): Thenable<void> {
         const match = this.matchManager.byMatchUriOrThrow(matchUri);
-        const previousExecution = this.lastExecution;
+        const previousExecution = this.queue.lastExecution;
 
         const applyChanges = async (progress: Progress<{ message: string }>): Promise<void> => {
             if (previousExecution) {
@@ -65,7 +65,7 @@ export class ApplyChangeCommand implements Command {
                 await this.applyChangesForMatch(matchUri, progress);
             } catch (error) {
                 this.handleApplyError(error);
-                this.lastExecution = undefined;
+                this.queue.lastExecution = undefined;
                 throw error;
             }
         };
@@ -73,7 +73,7 @@ export class ApplyChangeCommand implements Command {
         return this.window.withProgress({
             title: `Applying Change ${match.match.label}`,
             location: ProgressLocation.Notification
-        }, progress => this.lastExecution = applyChanges(progress));
+        }, progress => this.queue.lastExecution = applyChanges(progress));
     }
 
     private async waitForPreviousExecution(previousExecution: Thenable<void>, matchUri: Uri): Promise<void> {
