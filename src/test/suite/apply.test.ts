@@ -143,18 +143,12 @@ suite.only("Change Application", () => {
 
         void applyWellCoveredMatches();
 
-        await progress({
-            messages: [
-                "Running verification tasks"
-            ]
-        });
+        await progress({ messages: ["Running verification tasks"] });
 
         void applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 2));
 
-        await expect(progress({
-            messages: [
-                "Waiting for previous execution"
-            ]
-        })).to.eventually.exist;
+        await expect(progress(
+            { messages: ["Waiting for previous execution"] }
+        )).to.eventually.exist;
     });
 });
