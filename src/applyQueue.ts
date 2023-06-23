@@ -23,4 +23,8 @@ export class ApplyQueue {
     public isEmpty(): boolean {
         return this.queue.length === 0;
     }
+
+    public isPreviousExecutionRunning(): boolean {
+        return !!this.lastExecution;
+    }
 }

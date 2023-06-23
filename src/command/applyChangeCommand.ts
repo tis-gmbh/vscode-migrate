@@ -39,6 +39,8 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
             await this.closeCurrent(matchUri);
             await this.applyChangesWithProgress(matchUri);
             await this.checkMigrationDone();
+        } catch (error) {
+            this.handleApplyError(error);
         } finally {
             this.queue.remove(stringifiedUri);
             if (this.queue.isEmpty()) {
@@ -56,6 +58,10 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
 
     private applyChangesWithProgress(matchUri: Uri): Thenable<void> {
         const match = this.matchManager.byMatchUriOrThrow(matchUri);
+
+        if (this.queue.isPreviousExecutionRunning()) {
+            return Promise.reject(new Error(`Previous execution is still running.`));
+        }
 
         const applyChanges = async (progress: Progress<{ message: string }>): Promise<void> => {
             const previousExecution = this.queue.lastExecution;
@@ -97,8 +103,12 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
 
         this.matchManager.resolveEntry(matchUri);
 
-        progress.report({ message: "Running verification tasks" });
-        await this.migrationHolder.verify();
+        try {
+            progress.report({ message: "Running verification tasks" });
+            await this.migrationHolder.verify();
+        } catch (error) {
+            this.handleVerifyError(error);
+        }
 
         progress.report({ message: "Committing file" });
         await this.versionControl.stageAndCommit(matchUri);
@@ -115,10 +125,15 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         }
     }
 
-    private handleApplyError(error: any): void {
+    private handleVerifyError(error: any): void {
         const errorMessage = error.message || error;
         const message = `Failed to run verification tasks, the following error was thrown: ${errorMessage}`;
-        void this.window.showErrorMessage(message);
+        throw new Error(message);
+    }
+
+    private handleApplyError(error: any): void {
+        const errorMessage = error.message || error;
+        void this.window.showErrorMessage("Failed to apply. Reason: " + errorMessage);
     }
 
     private async checkMigrationDone(): Promise<void> {

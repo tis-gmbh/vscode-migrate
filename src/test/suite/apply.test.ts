@@ -6,7 +6,7 @@ import { stringify, toFileUri } from "../../utils/uri";
 import { applyAllFor, applyChangesFor, applyWellCoveredMatches, commits } from "../utils/apply";
 import { modifyContent } from "../utils/editor";
 import { actual, actualUri, expected } from "../utils/fs";
-import { progress, progressRecords } from "../utils/gui";
+import { message, progress, progressRecords } from "../utils/gui";
 import { getFirstMatch, getNthMatchUriOf, wellCoveredMatchesReady } from "../utils/tree";
 import { setModified, setUntracked } from "../utils/vcs";
 
@@ -94,21 +94,14 @@ suite("Change Application", () => {
     });
 
     test("shows queue notification if another match is applied when the previous application isn't done yet", async () => {
-        await scenario.load("twoFile", "Brackets");
+        await scenario.load("twoFile", "Brackets - Never Resolve Verify");
 
-        await Promise.all([
-            applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 1)),
-            applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 2))
-        ]);
+        void applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 1));
+        void applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 2));
 
-        await expect(progress({
-            messages: [
-                "Waiting for previous execution",
-                "Saving File",
-                "Running verification tasks",
-                "Committing file"
-            ],
-            done: true
+        await expect(message({
+            message: "Failed to apply. Reason: Previous execution is still running.",
+            level: "error"
         })).to.eventually.exist;
     });
 
@@ -138,8 +131,9 @@ suite("Change Application", () => {
 
         void applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 2));
 
-        await expect(progress(
-            { messages: ["Waiting for previous execution"] }
-        )).to.eventually.exist;
+        await expect(message({
+            message: "Failed to apply. Reason: Previous execution is still running.",
+            level: "error"
+        })).to.eventually.exist;
     });
 });

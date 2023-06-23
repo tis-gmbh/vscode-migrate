@@ -6,7 +6,7 @@ import { coverageDecorations, createCoverageScheme, getDecorationsFor } from "..
 import { getChangedContentFor, modifyContent, updateOf } from "../utils/editor";
 import { actual, actualPath, actualUri, expected } from "../utils/fs";
 import { message } from "../utils/gui";
-import { getFirstMatch, getNthMatchUriOf } from "../utils/tree";
+import { getFirstMatch, getNthMatchUriOf, wellCoveredMatchesReady } from "../utils/tree";
 
 suite("Editor", () => {
     test("generates the change", async () => {
@@ -21,6 +21,8 @@ suite("Editor", () => {
 
     test("generates code coverage decorations", async () => {
         await scenario.load("singleFile", "Brackets");
+
+        await wellCoveredMatchesReady();
 
         await expect(coverageDecorations(actualUri("src/main.ts"), createCoverageScheme([
             1,
