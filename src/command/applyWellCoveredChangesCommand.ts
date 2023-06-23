@@ -43,6 +43,8 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         try {
             await this.applyChangesWithProgress(matches);
             await this.checkMigrationDone();
+        } catch (error) {
+            this.handleApplyError(error);
         } finally {
             matches.forEach((match) => this.queue.remove(stringify(match)));
             if (this.queue.isEmpty()) {
@@ -52,16 +54,13 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
     }
 
     private applyChangesWithProgress(matches: Uri[]): Thenable<void> {
+        if (this.queue.isPreviousExecutionRunning()) {
+            return Promise.reject(new Error(`Previous execution is still running.`));
+        }
+
         const applyChanges = async (progress: Progress<{ message: string }>): Promise<void> => {
-            const previousExecution = this.queue.lastExecution;
-            if (previousExecution) {
-                progress.report({ message: "Waiting for previous execution" });
-                await this.waitForPreviousExecution(previousExecution);
-            }
             try {
-                progress.report({ message: "Running verification tasks" });
-                await this.migrationHolder.verify();
-                await this.applyMatches(matches);
+                await this.applyMatches(matches, progress);
             } catch (error) {
                 this.handleApplyError(error);
                 this.queue.lastExecution = undefined;
@@ -75,21 +74,19 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         }, progress => this.queue.lastExecution = applyChanges(progress));
     }
 
-    private async waitForPreviousExecution(previousExecution: Thenable<void>): Promise<void> {
-        try {
-            await previousExecution;
-        } catch (error) {
-            void this.window.showErrorMessage(`Changes were not applied because the previous application failed.`);
-            throw error;
-        }
-    }
-
-    private async applyMatches(matches: Uri[]): Promise<void> {
+    private async applyMatches(matches: Uri[], progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         await this.workspace.saveAll();
 
         const files = new Set(matches.map((match) => stringify(toFileUri(match))));
         for (const file of files) {
             await this.applyMatchesInFile(parse(file));
+        }
+
+        try {
+            progress.report({ message: "Running verification tasks" });
+            await this.migrationHolder.verify();
+        } catch (error) {
+            this.handleVerifyError(error);
         }
 
         await this.versionControl.stageAll();
@@ -106,10 +103,15 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         return matches;
     }
 
-    private handleApplyError(error: any): void {
+    private handleVerifyError(error: any): void {
         const errorMessage = error.message || error;
         const message = `Failed to run verification tasks, the following error was thrown: ${errorMessage}`;
-        void this.window.showErrorMessage(message);
+        throw new Error(message);
+    }
+
+    private handleApplyError(error: any): void {
+        const errorMessage = error.message || error;
+        void this.window.showErrorMessage("Failed to apply. Reason: " + errorMessage);
     }
 
     private async checkMigrationDone(): Promise<void> {

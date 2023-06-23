@@ -64,12 +64,6 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         }
 
         const applyChanges = async (progress: Progress<{ message: string }>): Promise<void> => {
-            const previousExecution = this.queue.lastExecution;
-            if (previousExecution) {
-                progress.report({ message: "Waiting for previous execution" });
-                await this.waitForPreviousExecution(previousExecution, matchUri);
-            }
-
             try {
                 await this.applyChangesForMatch(matchUri, progress);
             } catch (error) {
@@ -83,16 +77,6 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
             title: `Applying Change ${match.match.label}`,
             location: ProgressLocation.Notification
         }, progress => this.queue.lastExecution = applyChanges(progress));
-    }
-
-    private async waitForPreviousExecution(previousExecution: Thenable<void>, matchUri: Uri): Promise<void> {
-        try {
-            await previousExecution;
-        } catch (error) {
-            const match = this.matchManager.byMatchUriOrThrow(matchUri);
-            void this.window.showErrorMessage(`Changes for match ${match.match.label} were not applied because the previous application failed.`);
-            throw error;
-        }
     }
 
     private async applyChangesForMatch(matchUri: Uri, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {

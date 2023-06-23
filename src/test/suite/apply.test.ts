@@ -10,7 +10,7 @@ import { message, progress, progressRecords } from "../utils/gui";
 import { getFirstMatch, getNthMatchUriOf, wellCoveredMatchesReady } from "../utils/tree";
 import { setModified, setUntracked } from "../utils/vcs";
 
-suite("Change Application", () => {
+suite.only("Change Application", () => {
     test("applies a change", async () => {
         await scenario.load("singleFile", "Brackets");
         const firstMatch = getFirstMatch()!;
@@ -121,15 +121,31 @@ suite("Change Application", () => {
         }))).to.have.lengthOf(2);
     });
 
-    test("shows queue notification if another match is applied when the previous application of well applied matches isn't done yet", async () => {
+    test("shows error notification if another match is applied when the previous application of well covered matches isn't done yet", async () => {
         await scenario.load("covered", "Brackets - Never Resolve Verify");
 
         await wellCoveredMatchesReady();
         void applyWellCoveredMatches();
 
-        await progress({ messages: ["Running verification tasks"] });
+        await progress(entry => entry.messages.includes("Running verification tasks"));
 
         void applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 2));
+
+        await expect(message({
+            message: "Failed to apply. Reason: Previous execution is still running.",
+            level: "error"
+        })).to.eventually.exist;
+    });
+
+    test("shows error notification if well covered matches are applied when a previous application isn't done yet", async () => {
+        await scenario.load("covered", "Brackets - Never Resolve Verify");
+
+        await wellCoveredMatchesReady();
+        void applyChangesFor(getNthMatchUriOf(actualUri("src/firstFile.ts"), 2));
+
+        await progress(entry => entry.messages.includes("Running verification tasks"));
+
+        void applyWellCoveredMatches();
 
         await expect(message({
             message: "Failed to apply. Reason: Previous execution is still running.",
