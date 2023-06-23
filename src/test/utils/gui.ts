@@ -1,4 +1,5 @@
 import { VSC_TYPES } from "../../di/types";
+import { Criteria } from "../../utils/matches";
 import { MessageRecord, ProgressRecord, WindowStub } from "../stubs/window";
 
 export function atNextQuickPickChoose(optionName: string): void {
@@ -9,11 +10,11 @@ export function progressRecords(): ProgressRecord[] {
     return getWindow().progressRecords;
 }
 
-export function message(criteria: Partial<MessageRecord>): Promise<MessageRecord> {
+export function message(criteria: Criteria<MessageRecord>): Promise<MessageRecord> {
     return getWindow().messageRecords.awaitEntryMatching(criteria);
 }
 
-export function progress(criteria: Partial<ProgressRecord>): Promise<ProgressRecord> {
+export function progress(criteria: Criteria<ProgressRecord>): Promise<ProgressRecord> {
     return getWindow().progressRecords.awaitEntryMatching(criteria);
 }
 

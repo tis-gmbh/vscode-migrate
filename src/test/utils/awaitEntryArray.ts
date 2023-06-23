@@ -1,14 +1,10 @@
 import { EventEmitter } from "vscode";
-import { matches } from "../../utils/matches";
-
-type RecursivePartial<C> = {
-    [P in keyof C]?: RecursivePartial<C[P]>;
-};
+import { Criteria, matches } from "../../utils/matches";
 
 export class AwaitEntryArray<C extends Record<string, any>> extends Array<C> {
     public static instances = [] as AwaitEntryArray<any>[];
     private readonly recordsChangedEmitter = new EventEmitter<C>();
-    public readonly awaitedCriteria = [] as RecursivePartial<C>[];
+    public readonly awaitedCriteria: Array<Criteria<C>> = [];
 
     public constructor(...records: C[]) {
         super(...records);
@@ -22,18 +18,18 @@ export class AwaitEntryArray<C extends Record<string, any>> extends Array<C> {
         return super.push(...records);
     }
 
-    public awaitEntryMatching(criteria: RecursivePartial<C>): Promise<C> {
+    public awaitEntryMatching(criteria: Criteria<C>): Promise<C> {
         return Promise.resolve(
             this.findEntryMatching(criteria)
             || this.waitForEntryMatching(criteria)
         );
     }
 
-    private findEntryMatching(criteria: RecursivePartial<C>): C | undefined {
+    private findEntryMatching(criteria: Criteria<C>): C | undefined {
         return this.find(entry => matches(entry, criteria));
     }
 
-    private waitForEntryMatching(criteria: RecursivePartial<C>): Promise<C> {
+    private waitForEntryMatching(criteria: Criteria<C>): Promise<C> {
         this.awaitedCriteria.push(criteria);
         return new Promise(res => {
             const subscription = this.recordsChangedEmitter.event((update: C) => {

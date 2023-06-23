@@ -1,6 +1,7 @@
 import { TreeDataProvider, TreeItem, Uri } from "vscode";
 import { TYPES, VSC_TYPES } from "../../di/types";
 import { MatchManager } from "../../migration/matchManger";
+import { Criteria } from "../../utils/matches";
 import { stringify } from "../../utils/uri";
 import { CommandsStub } from "../stubs/commands";
 import { TreeRecord, WindowStub } from "../stubs/window";
@@ -51,11 +52,11 @@ function getTreeItemProvider(): TreeDataProvider<string> {
     return scenario.get(TYPES.AllMatchesTreeProvider);
 }
 
-export function allMatchesTree(criteria: Partial<TreeRecord>): Promise<TreeRecord> {
+export function allMatchesTree(criteria: Criteria<TreeRecord>): Promise<TreeRecord> {
     return getWindow().displayedTrees["vscode-migrate.all-matches"]!.awaitEntryMatching(criteria);
 }
 
-export function wellCoveredMatchesTree(criteria: Partial<TreeRecord>): Promise<TreeRecord> {
+export function wellCoveredMatchesTree(criteria: Criteria<TreeRecord>): Promise<TreeRecord> {
     return getWindow().displayedTrees["vscode-migrate.well-covered-matches"]!.awaitEntryMatching(criteria);
 }
 
