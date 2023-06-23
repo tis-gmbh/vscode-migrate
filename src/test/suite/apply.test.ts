@@ -7,7 +7,7 @@ import { applyAllFor, applyChangesFor, applyWellCoveredMatches, commits } from "
 import { modifyContent } from "../utils/editor";
 import { actual, actualUri, expected } from "../utils/fs";
 import { progress, progressRecords } from "../utils/gui";
-import { getFirstMatch, getNthMatchUriOf, wellCoveredMatchesTree } from "../utils/tree";
+import { getFirstMatch, getNthMatchUriOf, wellCoveredMatchesReady } from "../utils/tree";
 import { setModified, setUntracked } from "../utils/vcs";
 
 suite("Change Application", () => {
@@ -131,16 +131,7 @@ suite("Change Application", () => {
     test("shows queue notification if another match is applied when the previous application of well applied matches isn't done yet", async () => {
         await scenario.load("covered", "Brackets - Never Resolve Verify");
 
-        const expectedTree = {
-            "firstFile.ts": [
-                `>>>First match<<<`
-            ],
-            "secondFile.ts": [
-                `>>>Second file match<<<`
-            ]
-        };
-        await wellCoveredMatchesTree(expectedTree);
-
+        await wellCoveredMatchesReady();
         void applyWellCoveredMatches();
 
         await progress({ messages: ["Running verification tasks"] });

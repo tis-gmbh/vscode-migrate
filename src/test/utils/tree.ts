@@ -67,3 +67,7 @@ export function allTreeUpdate(criteria: any[]): Promise<any[]> {
 export function wellCoveredTreeUpdate(criteria: any[]): Promise<any[]> {
     return getWindow().treeUpdates["vscode-migrate.well-covered-matches"]!.awaitEntryMatching(criteria);
 }
+
+export function wellCoveredMatchesReady(): Promise<TreeRecord> {
+    return wellCoveredMatchesTree(tree => Object.keys(tree).length > 0);
+}
