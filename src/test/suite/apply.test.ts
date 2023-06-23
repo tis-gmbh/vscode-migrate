@@ -10,7 +10,7 @@ import { message, progress, progressRecords } from "../utils/gui";
 import { getFirstMatch, getNthMatchUriOf, wellCoveredMatchesReady } from "../utils/tree";
 import { setModified, setUntracked } from "../utils/vcs";
 
-suite.only("Change Application", () => {
+suite("Change Application", () => {
     test("applies a change", async () => {
         await scenario.load("singleFile", "Brackets");
         const firstMatch = getFirstMatch()!;
