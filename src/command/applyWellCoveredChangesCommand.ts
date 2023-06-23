@@ -9,7 +9,7 @@ import { CoverageProvider } from "../providers/coverageProvider";
 import { MatchCoverageFilter } from "../providers/matchCoverageFilter";
 import { MatchFileSystemProvider } from "../providers/matchFileSystemProvider";
 import { NonEmptyArray } from "../utilTypes";
-import { stringify } from "../utils/uri";
+import { parse, stringify, toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
 import { ApplyCommand } from "./applyCommand";
 import { Command } from "./command";
@@ -36,10 +36,8 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
 
     public async execute(): Promise<void> {
         const filesWithCoveredMatches = await this.matchCoverageFilter.getQueuedFiles();
-        let matches: Uri[] = [];
-        for (const file of filesWithCoveredMatches) {
-            matches = matches.concat(await this.applyMatchesInFile(file));
-        }
+        const matchUrisGroupedByFile = await Promise.all(filesWithCoveredMatches.map((file) => this.matchCoverageFilter.getMatchUrisByFileUri(file)));
+        const matches = matchUrisGroupedByFile.flat();
 
         matches.forEach((match) => this.queue.push(stringify(match)));
         try {
@@ -88,6 +86,12 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
 
     private async applyMatches(matches: Uri[]): Promise<void> {
         await this.workspace.saveAll();
+
+        const files = new Set(matches.map((match) => stringify(toFileUri(match))));
+        for (const file of files) {
+            await this.applyMatchesInFile(parse(file));
+        }
+
         await this.versionControl.stageAll();
         await this.versionControl.commit(`Batch application of ${matches.length} well covered matches for migration 'Brackets'`);
         this.matchManager.resolveEntries(matches);
