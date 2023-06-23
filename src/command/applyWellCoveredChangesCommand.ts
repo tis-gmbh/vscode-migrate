@@ -31,7 +31,7 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         @inject(TYPES.MatchCoverageFilter) protected readonly matchCoverageFilter: MatchCoverageFilter,
         @inject(TYPES.ApplyQueue) private readonly queue: ApplyQueue,
     ) {
-        super();
+        super(window, matchManager, migrationHolder);
     }
 
     public async execute(): Promise<void> {
@@ -101,22 +101,5 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         const newBuffer = Buffer.from(newContent);
         await this.workspace.fs.writeFile(fileUri, newBuffer);
         return matches;
-    }
-
-    private handleVerifyError(error: any): void {
-        const errorMessage = error.message || error;
-        const message = `Failed to run verification tasks, the following error was thrown: ${errorMessage}`;
-        throw new Error(message);
-    }
-
-    private handleApplyError(error: any): void {
-        const errorMessage = error.message || error;
-        void this.window.showErrorMessage("Failed to apply. Reason: " + errorMessage);
-    }
-
-    private async checkMigrationDone(): Promise<void> {
-        if (this.matchManager.allResolved) {
-            await this.migrationHolder.stop();
-        }
     }
 }

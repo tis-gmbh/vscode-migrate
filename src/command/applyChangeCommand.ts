@@ -23,7 +23,7 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote,
         @inject(TYPES.ApplyQueue) private readonly queue: ApplyQueue,
     ) {
-        super();
+        super(window, matchManager, migrationHolder);
     }
 
     public async execute(matchUri: Uri): Promise<void> {
@@ -106,23 +106,6 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
 
         if (modifiedDocument && modifiedDocument.isDirty) {
             await modifiedDocument.save();
-        }
-    }
-
-    private handleVerifyError(error: any): void {
-        const errorMessage = error.message || error;
-        const message = `Failed to run verification tasks, the following error was thrown: ${errorMessage}`;
-        throw new Error(message);
-    }
-
-    private handleApplyError(error: any): void {
-        const errorMessage = error.message || error;
-        void this.window.showErrorMessage("Failed to apply. Reason: " + errorMessage);
-    }
-
-    private async checkMigrationDone(): Promise<void> {
-        if (this.matchManager.allResolved) {
-            await this.migrationHolder.stop();
         }
     }
 }
