@@ -22,28 +22,16 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         @inject(VSC_TYPES.VscCommands) protected readonly commands: VscCommands,
         @inject(TYPES.VersionControl) protected readonly versionControl: VersionControl,
         @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote,
-        @inject(TYPES.ApplyExecutionLock) private readonly applyLock: Lock
+        @inject(TYPES.ApplyExecutionLock) applyLock: Lock
     ) {
-        super(window, matchManager, migrationHolder);
+        super(window, matchManager, migrationHolder, applyLock);
     }
 
     public async execute(matchUri: Uri): Promise<void> {
         await this.tryApplyLocked([matchUri]);
     }
 
-    private async tryApplyLocked(matches: NonEmptyArray<Uri>): Promise<void> {
-        try {
-            await this.applyLocked(matches);
-        } catch (error) {
-            this.handleApplyError(error);
-        }
-    }
-
-    private applyLocked(matches: NonEmptyArray<Uri>): Promise<void> {
-        return this.applyLock.lockWhile(() => this.apply(matches));
-    }
-
-    private async apply(matches: NonEmptyArray<Uri>): Promise<void> {
+    protected async apply(matches: NonEmptyArray<Uri>): Promise<void> {
         const matchUri = matches[0];
         await this.saveEditor(matchUri);
         await this.closeCurrent(matchUri);

@@ -29,9 +29,9 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         @inject(TYPES.CoverageProvider) protected readonly coverageProvider: CoverageProvider,
         @inject(TYPES.MergeService) protected readonly mergeService: MergeService,
         @inject(TYPES.MatchCoverageFilter) protected readonly matchCoverageFilter: MatchCoverageFilter,
-        @inject(TYPES.ApplyExecutionLock) private readonly applyLock: Lock,
+        @inject(TYPES.ApplyExecutionLock) applyLock: Lock,
     ) {
-        super(window, matchManager, migrationHolder);
+        super(window, matchManager, migrationHolder, applyLock);
     }
 
     public async execute(): Promise<void> {
@@ -39,19 +39,7 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         await this.tryApplyLocked(matches);
     }
 
-    private async tryApplyLocked(matches: NonEmptyArray<Uri>): Promise<void> {
-        try {
-            await this.applyLocked(matches);
-        } catch (error) {
-            this.handleApplyError(error);
-        }
-    }
-
-    private applyLocked(matches: NonEmptyArray<Uri>): Promise<void> {
-        return this.applyLock.lockWhile(() => this.apply(matches));
-    }
-
-    private async apply(matches: NonEmptyArray<Uri>): Promise<void> {
+    protected async apply(matches: NonEmptyArray<Uri>): Promise<void> {
         await this.applyChangesWithProgress(matches);
         await this.checkMigrationDone();
     }
