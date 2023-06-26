@@ -21,12 +21,16 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         @inject(VSC_TYPES.VscCommands) protected readonly commands: VscCommands,
         @inject(TYPES.VersionControl) protected readonly versionControl: VersionControl,
         @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote,
-        @inject(TYPES.ApplyExecutionLock) private readonly applyLock: Lock,
+        @inject(TYPES.ApplyExecutionLock) private readonly applyLock: Lock
     ) {
         super(window, matchManager, migrationHolder);
     }
 
     public async execute(matchUri: Uri): Promise<void> {
+        await this.tryApplyLocked(matchUri);
+    }
+
+    private async tryApplyLocked(matchUri: Uri): Promise<void> {
         try {
             await this.applyLocked(matchUri);
         } catch (error) {

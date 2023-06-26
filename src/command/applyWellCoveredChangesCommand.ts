@@ -35,24 +35,31 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
     }
 
     public async execute(): Promise<void> {
+        const matches = await this.getWellCoveredMatches();
+        await this.tryApplyLocked(matches);
+    }
+
+    private async tryApplyLocked(matches: Uri[]): Promise<void> {
         try {
-            await this.applyLocked();
+            await this.applyLocked(matches);
         } catch (error) {
             this.handleApplyError(error);
         }
     }
 
-    private applyLocked(): Promise<void> {
-        return this.applyLock.lockWhile(() => this.apply());
+    private applyLocked(matches: Uri[]): Promise<void> {
+        return this.applyLock.lockWhile(() => this.apply(matches));
     }
 
-    private async apply(): Promise<void> {
-        const filesWithCoveredMatches = await this.matchCoverageFilter.getQueuedFiles();
-        const matchUrisGroupedByFile = await Promise.all(filesWithCoveredMatches.map((file) => this.matchCoverageFilter.getMatchUrisByFileUri(file)));
-        const matches = matchUrisGroupedByFile.flat();
-
+    private async apply(matches: Uri[]): Promise<void> {
         await this.applyChangesWithProgress(matches);
         await this.checkMigrationDone();
+    }
+
+    private async getWellCoveredMatches(): Promise<Uri[]> {
+        const filesWithCoveredMatches = await this.matchCoverageFilter.getQueuedFiles();
+        const matchUrisGroupedByFile = await Promise.all(filesWithCoveredMatches.map((file) => this.matchCoverageFilter.getMatchUrisByFileUri(file)));
+        return matchUrisGroupedByFile.flat();
     }
 
     private applyChangesWithProgress(matches: Uri[]): Thenable<void> {
