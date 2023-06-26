@@ -35,43 +35,31 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
     }
 
     public async execute(): Promise<void> {
+        try {
+            await this.applyLocked();
+        } catch (error) {
+            this.handleApplyError(error);
+        }
+    }
+
+    private applyLocked(): Promise<void> {
+        return this.queue.lockWhile(() => this.apply());
+    }
+
+    private async apply(): Promise<void> {
         const filesWithCoveredMatches = await this.matchCoverageFilter.getQueuedFiles();
         const matchUrisGroupedByFile = await Promise.all(filesWithCoveredMatches.map((file) => this.matchCoverageFilter.getMatchUrisByFileUri(file)));
         const matches = matchUrisGroupedByFile.flat();
 
-        matches.forEach((match) => this.queue.push(stringify(match)));
-        try {
-            await this.applyChangesWithProgress(matches);
-            await this.checkMigrationDone();
-        } catch (error) {
-            this.handleApplyError(error);
-        } finally {
-            matches.forEach((match) => this.queue.remove(stringify(match)));
-            if (this.queue.isEmpty()) {
-                this.queue.lastExecution = undefined;
-            }
-        }
+        await this.applyChangesWithProgress(matches);
+        await this.checkMigrationDone();
     }
 
     private applyChangesWithProgress(matches: Uri[]): Thenable<void> {
-        if (this.queue.isPreviousExecutionRunning()) {
-            return Promise.reject(new Error(`Previous execution is still running.`));
-        }
-
-        const applyChanges = async (progress: Progress<{ message: string }>): Promise<void> => {
-            try {
-                await this.applyMatches(matches, progress);
-            } catch (error) {
-                this.handleApplyError(error);
-                this.queue.lastExecution = undefined;
-                throw error;
-            }
-        };
-
         return this.window.withProgress({
             title: `Applying Well Covered Changes`,
             location: ProgressLocation.Notification
-        }, progress => this.queue.lastExecution = applyChanges(progress));
+        }, progress => this.applyMatches(matches, progress));
     }
 
     private async applyMatches(matches: Uri[], progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {

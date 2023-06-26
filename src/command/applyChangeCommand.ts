@@ -27,26 +27,22 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
     }
 
     public async execute(matchUri: Uri): Promise<void> {
-        const stringifiedUri = stringify(matchUri);
-        if (this.queue.includes(stringifiedUri)) {
-            void this.window.showInformationMessage(`Match is already queued.`);
-            return;
-        }
-
-        this.queue.push(stringifiedUri);
         try {
-            await this.saveEditor(matchUri);
-            await this.closeCurrent(matchUri);
-            await this.applyChangesWithProgress(matchUri);
-            await this.checkMigrationDone();
+            await this.applyLocked(matchUri);
         } catch (error) {
             this.handleApplyError(error);
-        } finally {
-            this.queue.remove(stringifiedUri);
-            if (this.queue.isEmpty()) {
-                this.queue.lastExecution = undefined;
-            }
         }
+    }
+
+    private applyLocked(matchUri: Uri): Promise<void> {
+        return this.queue.lockWhile(() => this.apply(matchUri));
+    }
+
+    private async apply(matchUri: Uri): Promise<void> {
+        await this.saveEditor(matchUri);
+        await this.closeCurrent(matchUri);
+        await this.applyChangesWithProgress(matchUri);
+        await this.checkMigrationDone();
     }
 
     private async closeCurrent(matchUri: Uri): Promise<void> {
@@ -59,24 +55,10 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
     private applyChangesWithProgress(matchUri: Uri): Thenable<void> {
         const match = this.matchManager.byMatchUriOrThrow(matchUri);
 
-        if (this.queue.isPreviousExecutionRunning()) {
-            return Promise.reject(new Error(`Previous execution is still running.`));
-        }
-
-        const applyChanges = async (progress: Progress<{ message: string }>): Promise<void> => {
-            try {
-                await this.applyChangesForMatch(matchUri, progress);
-            } catch (error) {
-                this.handleApplyError(error);
-                this.queue.lastExecution = undefined;
-                throw error;
-            }
-        };
-
         return this.window.withProgress({
             title: `Applying Change ${match.match.label}`,
             location: ProgressLocation.Notification
-        }, progress => this.queue.lastExecution = applyChanges(progress));
+        }, progress => this.applyChangesForMatch(matchUri, progress));
     }
 
     private async applyChangesForMatch(matchUri: Uri, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
