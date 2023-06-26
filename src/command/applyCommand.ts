@@ -1,5 +1,5 @@
 import { inject, injectable } from "inversify";
-import { Uri } from "vscode";
+import { Progress, Uri } from "vscode";
 import { TYPES, VSC_TYPES, VscWindow } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
@@ -44,4 +44,17 @@ export abstract class ApplyCommand {
     }
 
     protected abstract apply(matches: NonEmptyArray<Uri>): Promise<void>;
+
+    protected async tryRunVerify(progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+        try {
+            progress.report({ message: "Running verification tasks" });
+            await this.runVerify();
+        } catch (error) {
+            this.handleVerifyError(error);
+        }
+    }
+
+    private async runVerify(): Promise<void> {
+        await this.migrationHolder.verify();
+    }
 }

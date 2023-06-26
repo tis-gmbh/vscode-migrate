@@ -63,12 +63,7 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
 
         this.matchManager.resolveEntry(matchUri);
 
-        try {
-            progress.report({ message: "Running verification tasks" });
-            await this.migrationHolder.verify();
-        } catch (error) {
-            this.handleVerifyError(error);
-        }
+        await this.tryRunVerify(progress);
 
         progress.report({ message: "Committing file" });
         await this.versionControl.stageAndCommit(matchUri);

@@ -71,12 +71,7 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
             await this.applyMatchesInFile(parse(file));
         }
 
-        try {
-            progress.report({ message: "Running verification tasks" });
-            await this.migrationHolder.verify();
-        } catch (error) {
-            this.handleVerifyError(error);
-        }
+        await this.tryRunVerify(progress);
 
         await this.versionControl.stageAll();
         await this.versionControl.commit(`Batch application of ${matches.length} well covered matches for migration 'Brackets'`);
