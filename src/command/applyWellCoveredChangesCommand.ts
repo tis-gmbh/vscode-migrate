@@ -1,6 +1,5 @@
 import { inject, injectable } from "inversify";
 import { Progress, ProgressLocation, Uri } from "vscode";
-import { ApplyQueue } from "../applyQueue";
 import { TYPES, VSC_TYPES, VscCommands, VscWindow, VscWorkspace } from "../di/types";
 import { MergeService } from "../mergeService";
 import { MatchManager } from "../migration/matchManger";
@@ -9,6 +8,7 @@ import { CoverageProvider } from "../providers/coverageProvider";
 import { MatchCoverageFilter } from "../providers/matchCoverageFilter";
 import { MatchFileSystemProvider } from "../providers/matchFileSystemProvider";
 import { NonEmptyArray } from "../utilTypes";
+import { Lock } from "../utils/lock";
 import { parse, stringify, toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
 import { ApplyCommand } from "./applyCommand";
@@ -29,7 +29,7 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         @inject(TYPES.CoverageProvider) protected readonly coverageProvider: CoverageProvider,
         @inject(TYPES.MergeService) protected readonly mergeService: MergeService,
         @inject(TYPES.MatchCoverageFilter) protected readonly matchCoverageFilter: MatchCoverageFilter,
-        @inject(TYPES.ApplyQueue) private readonly queue: ApplyQueue,
+        @inject(TYPES.ApplyExecutionLock) private readonly applyLock: Lock,
     ) {
         super(window, matchManager, migrationHolder);
     }
@@ -43,7 +43,7 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
     }
 
     private applyLocked(): Promise<void> {
-        return this.queue.lockWhile(() => this.apply());
+        return this.applyLock.lockWhile(() => this.apply());
     }
 
     private async apply(): Promise<void> {

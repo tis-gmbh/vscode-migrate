@@ -1,9 +1,9 @@
 import { inject, injectable } from "inversify";
 import { FileSystemProvider, Progress, ProgressLocation, Uri } from "vscode";
-import { ApplyQueue } from "../applyQueue";
 import { TYPES, VSC_TYPES, VscCommands, VscWindow, VscWorkspace } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
+import { Lock } from "../utils/lock";
 import { stringify, toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
 import { ApplyCommand } from "./applyCommand";
@@ -21,7 +21,7 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         @inject(VSC_TYPES.VscCommands) protected readonly commands: VscCommands,
         @inject(TYPES.VersionControl) protected readonly versionControl: VersionControl,
         @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote,
-        @inject(TYPES.ApplyQueue) private readonly queue: ApplyQueue,
+        @inject(TYPES.ApplyExecutionLock) private readonly applyLock: Lock,
     ) {
         super(window, matchManager, migrationHolder);
     }
@@ -35,7 +35,7 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
     }
 
     private applyLocked(matchUri: Uri): Promise<void> {
-        return this.queue.lockWhile(() => this.apply(matchUri));
+        return this.applyLock.lockWhile(() => this.apply(matchUri));
     }
 
     private async apply(matchUri: Uri): Promise<void> {

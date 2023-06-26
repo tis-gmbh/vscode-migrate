@@ -1,7 +1,4 @@
-import { injectable } from "inversify";
-
-@injectable()
-export class ApplyQueue {
+export class Lock {
     private _isLocked = false;
 
     public async lockWhile(blocking: () => Promise<void>): Promise<void> {

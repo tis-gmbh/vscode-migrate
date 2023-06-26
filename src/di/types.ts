@@ -20,7 +20,7 @@ export const TYPES = {
     MigrationStdOutChannel: Symbol.for("MigrationStdOutChannel"),
     MergeService: Symbol.for("MergeService"),
     MatchCoverageFilter: Symbol.for("MatchCoverageFilter"),
-    ApplyQueue: Symbol.for("ApplyQueue")
+    ApplyExecutionLock: Symbol.for("ApplyExecutionLock")
 };
 
 export const VSC_TYPES = {
