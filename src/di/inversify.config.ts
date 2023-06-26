@@ -47,7 +47,8 @@ export const modules = new ContainerModule(bind => {
     bind(TYPES.CoverageProvider).to(CoverageProvider).inSingletonScope();
     bind(TYPES.MergeService).to(MergeService).inSingletonScope();
     bind(TYPES.MatchCoverageFilter).to(MatchCoverageFilter).inSingletonScope();
-    bind(TYPES.ApplyExecutionLock).to(Lock).inSingletonScope();
+
+    bind(TYPES.ApplyExecutionLock).toConstantValue(new Lock());
 });
 
 export const vscCommands = new ContainerModule(bind => {
