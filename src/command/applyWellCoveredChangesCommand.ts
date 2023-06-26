@@ -39,9 +39,12 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         await this.tryApplyLocked(matches);
     }
 
-    protected async apply(matches: NonEmptyArray<Uri>): Promise<void> {
-        await this.applyChangesWithProgress(matches);
-        await this.checkMigrationDone();
+    protected async save(_matches: NonEmptyArray<Uri>): Promise<void> {
+        await this.workspace.saveAll();
+    }
+
+    protected async close(_matches: NonEmptyArray<Uri>): Promise<void> {
+        // API does not support closing editors that are not the active editor
     }
 
     private async getWellCoveredMatches(): Promise<NonEmptyArray<Uri>> {
@@ -56,7 +59,7 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         throw new Error("No well covered matches found");
     }
 
-    private applyChangesWithProgress(matches: Uri[]): Thenable<void> {
+    protected applyChangesWithProgress(matches: NonEmptyArray<Uri>): Thenable<void> {
         return this.window.withProgress({
             title: `Applying Well Covered Changes`,
             location: ProgressLocation.Notification

@@ -4,6 +4,7 @@ import { TYPES, VSC_TYPES, VscWindow } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { NonEmptyArray } from "../utilTypes";
+import { Lock } from "../utils/lock";
 
 @injectable()
 export abstract class ApplyCommand {
@@ -25,12 +26,6 @@ export abstract class ApplyCommand {
         throw new Error(message);
     }
 
-    protected async checkMigrationDone(): Promise<void> {
-        if (this.matchManager.allResolved) {
-            await this.migrationHolder.stop();
-        }
-    }
-
     protected async tryApplyLocked(matches: NonEmptyArray<Uri>): Promise<void> {
         try {
             await this.applyLocked(matches);
@@ -43,7 +38,24 @@ export abstract class ApplyCommand {
         return this.applyLock.lockWhile(() => this.apply(matches));
     }
 
-    protected abstract apply(matches: NonEmptyArray<Uri>): Promise<void>;
+    protected async apply(matches: NonEmptyArray<Uri>): Promise<void> {
+        await this.save(matches);
+        await this.close(matches);
+        await this.applyChangesWithProgress(matches);
+        await this.checkMigrationDone();
+    }
+
+    protected abstract save(matches: NonEmptyArray<Uri>): Promise<void>;
+
+    protected abstract close(_matches: NonEmptyArray<Uri>): Promise<void>;
+
+    protected abstract applyChangesWithProgress(matches: NonEmptyArray<Uri>): Thenable<void>;
+
+    protected async checkMigrationDone(): Promise<void> {
+        if (this.matchManager.allResolved) {
+            await this.migrationHolder.stop();
+        }
+    }
 
     protected async tryRunVerify(progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         try {

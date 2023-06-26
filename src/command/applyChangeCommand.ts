@@ -31,22 +31,16 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         await this.tryApplyLocked([matchUri]);
     }
 
-    protected async apply(matches: NonEmptyArray<Uri>): Promise<void> {
+    protected async close(matches: NonEmptyArray<Uri>): Promise<void> {
         const matchUri = matches[0];
-        await this.saveEditor(matchUri);
-        await this.closeCurrent(matchUri);
-        await this.applyChangesWithProgress(matchUri);
-        await this.checkMigrationDone();
-    }
-
-    private async closeCurrent(matchUri: Uri): Promise<void> {
         const active = this.window.activeTextEditor;
         if (active && stringify(active.document.uri) === stringify(matchUri)) {
             await this.commands.executeCommand("workbench.action.closeActiveEditor");
         }
     }
 
-    private applyChangesWithProgress(matchUri: Uri): Thenable<void> {
+    protected applyChangesWithProgress(matches: NonEmptyArray<Uri>): Thenable<void> {
+        const matchUri = matches[0];
         const match = this.matchManager.byMatchUriOrThrow(matchUri);
 
         return this.window.withProgress({
@@ -69,7 +63,8 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         await this.versionControl.stageAndCommit(matchUri);
     }
 
-    private async saveEditor(matchUri: Uri): Promise<void> {
+    protected async save(matches: NonEmptyArray<Uri>): Promise<void> {
+        const matchUri = matches[0];
         const stringifiedUri = stringify(matchUri);
         const modifiedDocument = this.workspace.textDocuments.find(
             candidate => stringify(candidate.uri) === stringifiedUri
