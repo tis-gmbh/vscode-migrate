@@ -7,7 +7,7 @@ import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { CoverageProvider } from "../providers/coverageProvider";
 import { MatchCoverageFilter } from "../providers/matchCoverageFilter";
 import { MatchFileSystemProvider } from "../providers/matchFileSystemProvider";
-import { NonEmptyArray } from "../utilTypes";
+import { NonEmptyArray, isNotEmptyArray } from "../utilTypes";
 import { Lock } from "../utils/lock";
 import { parse, stringify, toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
@@ -39,7 +39,7 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         await this.tryApplyLocked(matches);
     }
 
-    private async tryApplyLocked(matches: Uri[]): Promise<void> {
+    private async tryApplyLocked(matches: NonEmptyArray<Uri>): Promise<void> {
         try {
             await this.applyLocked(matches);
         } catch (error) {
@@ -47,19 +47,25 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         }
     }
 
-    private applyLocked(matches: Uri[]): Promise<void> {
+    private applyLocked(matches: NonEmptyArray<Uri>): Promise<void> {
         return this.applyLock.lockWhile(() => this.apply(matches));
     }
 
-    private async apply(matches: Uri[]): Promise<void> {
+    private async apply(matches: NonEmptyArray<Uri>): Promise<void> {
         await this.applyChangesWithProgress(matches);
         await this.checkMigrationDone();
     }
 
-    private async getWellCoveredMatches(): Promise<Uri[]> {
+    private async getWellCoveredMatches(): Promise<NonEmptyArray<Uri>> {
         const filesWithCoveredMatches = await this.matchCoverageFilter.getQueuedFiles();
         const matchUrisGroupedByFile = await Promise.all(filesWithCoveredMatches.map((file) => this.matchCoverageFilter.getMatchUrisByFileUri(file)));
-        return matchUrisGroupedByFile.flat();
+        const matches = matchUrisGroupedByFile.flat();
+
+        if (isNotEmptyArray(matches)) {
+            return matches;
+        }
+
+        throw new Error("No well covered matches found");
     }
 
     private applyChangesWithProgress(matches: Uri[]): Thenable<void> {

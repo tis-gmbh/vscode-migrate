@@ -3,6 +3,7 @@ import { FileSystemProvider, Progress, ProgressLocation, Uri } from "vscode";
 import { TYPES, VSC_TYPES, VscCommands, VscWindow, VscWorkspace } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
+import { NonEmptyArray } from "../utilTypes";
 import { Lock } from "../utils/lock";
 import { stringify, toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
@@ -27,22 +28,23 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
     }
 
     public async execute(matchUri: Uri): Promise<void> {
-        await this.tryApplyLocked(matchUri);
+        await this.tryApplyLocked([matchUri]);
     }
 
-    private async tryApplyLocked(matchUri: Uri): Promise<void> {
+    private async tryApplyLocked(matches: NonEmptyArray<Uri>): Promise<void> {
         try {
-            await this.applyLocked(matchUri);
+            await this.applyLocked(matches);
         } catch (error) {
             this.handleApplyError(error);
         }
     }
 
-    private applyLocked(matchUri: Uri): Promise<void> {
-        return this.applyLock.lockWhile(() => this.apply(matchUri));
+    private applyLocked(matches: NonEmptyArray<Uri>): Promise<void> {
+        return this.applyLock.lockWhile(() => this.apply(matches));
     }
 
-    private async apply(matchUri: Uri): Promise<void> {
+    private async apply(matches: NonEmptyArray<Uri>): Promise<void> {
+        const matchUri = matches[0];
         await this.saveEditor(matchUri);
         await this.closeCurrent(matchUri);
         await this.applyChangesWithProgress(matchUri);
