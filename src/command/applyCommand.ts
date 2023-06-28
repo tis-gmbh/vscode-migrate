@@ -3,9 +3,10 @@ import { Progress, ProgressLocation, TabGroup, TabInputText, TabInputTextDiff, U
 import { TYPES, VSC_TYPES, VscWindow, VscWorkspace } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
+import { MatchFileSystemProvider } from "../providers/matchFileSystemProvider";
 import { NonEmptyArray } from "../utilTypes";
 import { Lock } from "../utils/lock";
-import { stringify } from "../utils/uri";
+import { stringify, toFileUri } from "../utils/uri";
 
 export type WindowProgress = Progress<{
     message?: string | undefined;
@@ -20,6 +21,7 @@ export abstract class ApplyCommand {
         @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote,
         @inject(TYPES.ApplyExecutionLock) private readonly applyLock: Lock,
         @inject(VSC_TYPES.VscWorkspace) protected readonly workspace: VscWorkspace,
+        @inject(TYPES.MatchFileSystemProvider) protected readonly changedContentProvider: MatchFileSystemProvider,
     ) { }
 
     protected handleApplyError(error: any): void {
@@ -89,13 +91,13 @@ export abstract class ApplyCommand {
     protected abstract getProgressTitle(matches: NonEmptyArray<Uri>): string;
 
     protected async applyMatches(matches: NonEmptyArray<Uri>, progress: WindowProgress): Promise<void> {
-        await this.applyChanges(matches, progress);
+        await this.writeChanges(matches, progress);
         await this.tryRunVerify(progress);
         await this.commitToVcs(matches, progress);
         this.matchManager.resolveEntries(matches);
     }
 
-    protected abstract applyChanges(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void>;
+    protected abstract writeChanges(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void>;
 
 
     protected abstract commitToVcs(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void>;
@@ -118,5 +120,13 @@ export abstract class ApplyCommand {
 
     private async runVerify(): Promise<void> {
         await this.migrationHolder.verify();
+    }
+
+    protected async writeSameFileChanges(matches: NonEmptyArray<Uri>): Promise<void> {
+        const fileUri = toFileUri(matches[0]);
+        const newContent = await this.changedContentProvider.getMergeResult(...matches);
+
+        const newBuffer = Buffer.from(newContent);
+        await this.workspace.fs.writeFile(fileUri, newBuffer);
     }
 }

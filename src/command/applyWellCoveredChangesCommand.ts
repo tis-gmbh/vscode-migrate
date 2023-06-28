@@ -9,7 +9,7 @@ import { MatchCoverageFilter } from "../providers/matchCoverageFilter";
 import { MatchFileSystemProvider } from "../providers/matchFileSystemProvider";
 import { NonEmptyArray, isNotEmptyArray } from "../utilTypes";
 import { Lock } from "../utils/lock";
-import { parse, stringify, toFileUri } from "../utils/uri";
+import { stringify, toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
 import { ApplyCommand, WindowProgress } from "./applyCommand";
 import { Command } from "./command";
@@ -31,7 +31,7 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         @inject(TYPES.MatchCoverageFilter) protected readonly matchCoverageFilter: MatchCoverageFilter,
         @inject(TYPES.ApplyExecutionLock) applyLock: Lock,
     ) {
-        super(window, matchManager, migrationHolder, applyLock, workspace);
+        super(window, matchManager, migrationHolder, applyLock, workspace, changedContentProvider);
     }
 
     public async execute(): Promise<void> {
@@ -60,18 +60,21 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         await this.versionControl.commit(`Batch application of ${matches.length} well covered matches for migration 'Brackets'`);
     }
 
-    protected async applyChanges(matches: Uri[], _progress: WindowProgress): Promise<void> {
-        const files = new Set(matches.map((match) => stringify(toFileUri(match))));
-        for (const file of files) {
-            await this.applyMatchesInFile(parse(file));
+    protected async writeChanges(matches: Uri[], _progress: WindowProgress): Promise<void> {
+        const matchesByFile = matches.reduce((acc, match) => {
+            const file = stringify(toFileUri(match));
+            let matches = acc.get(file);
+            if (!matches) {
+                matches = [match];
+                acc.set(file, matches);
+            } else {
+                matches.push(match);
+            }
+            return acc;
+        }, new Map<string, NonEmptyArray<Uri>>());
+
+        for (const matches of matchesByFile.values()) {
+            await this.writeSameFileChanges(matches);
         }
-    }
-
-    protected async applyMatchesInFile(fileUri: Uri): Promise<void> {
-        const matches = await this.matchCoverageFilter.getMatchUrisByFileUri(fileUri) as NonEmptyArray<Uri>;
-        const newContent = await this.changedContentProvider.getMergeResult(...matches);
-
-        const newBuffer = Buffer.from(newContent);
-        await this.workspace.fs.writeFile(fileUri, newBuffer);
     }
 }
