@@ -99,21 +99,21 @@ export abstract class ApplyCommand {
         this.resolveMatches(matches);
     }
 
-    private resolveMatches(matches: MatchCollection): void {
-        const allMatches = Object.values(matches).flat();
-        this.matchManager.resolveEntries(allMatches);
+    protected async writeChanges(matches: MatchCollection, progress: WindowProgress): Promise<void> {
+        progress.report({ message: "Applying changes to files" });
+        for (const file of matches.files()) {
+            await this.writeSameFileChanges(matches.ofFile(file));
+        }
     }
 
-    protected abstract writeChanges(matches: MatchCollection, progress: WindowProgress): Promise<void>;
+    protected async writeSameFileChanges(matches: Uri[]): Promise<void> {
+        if (!matches[0]) return;
+        const fileUri = toFileUri(matches[0]);
+        const newContent = await this.changedContentProvider
+            .getMergeResult(...matches as NonEmptyArray<Uri>);
 
-
-    protected abstract commitToVcs(matches: MatchCollection, progress: WindowProgress): Promise<void>;
-
-
-    protected async checkMigrationDone(): Promise<void> {
-        if (this.matchManager.allResolved) {
-            await this.migrationHolder.stop();
-        }
+        const newBuffer = Buffer.from(newContent);
+        await this.workspace.fs.writeFile(fileUri, newBuffer);
     }
 
     protected async tryRunVerify(progress: WindowProgress): Promise<void> {
@@ -129,13 +129,16 @@ export abstract class ApplyCommand {
         await this.migrationHolder.verify();
     }
 
-    protected async writeSameFileChanges(matches: Uri[]): Promise<void> {
-        if (!matches[0]) return;
-        const fileUri = toFileUri(matches[0]);
-        const newContent = await this.changedContentProvider
-            .getMergeResult(...matches as NonEmptyArray<Uri>);
+    protected abstract commitToVcs(matches: MatchCollection, progress: WindowProgress): Promise<void>;
 
-        const newBuffer = Buffer.from(newContent);
-        await this.workspace.fs.writeFile(fileUri, newBuffer);
+    private resolveMatches(matches: MatchCollection): void {
+        const allMatches = Object.values(matches).flat();
+        this.matchManager.resolveEntries(allMatches);
+    }
+
+    protected async checkMigrationDone(): Promise<void> {
+        if (this.matchManager.allResolved) {
+            await this.migrationHolder.stop();
+        }
     }
 }

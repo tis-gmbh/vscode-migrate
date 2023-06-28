@@ -3,6 +3,7 @@ import { EventEmitter, Uri } from "vscode";
 import { TYPES } from "../di/types";
 import { MergeService } from "../mergeService";
 import { MatchEntry, MatchManager } from "../migration/matchManger";
+import { MatchCollection } from "../test/utils/matchCollection";
 import { asyncFilter, asyncSome } from "../utils/asyncArray";
 import { toFileUri } from "../utils/uri";
 import { CoverageProvider } from "./coverageProvider";
@@ -58,5 +59,17 @@ export class MatchCoverageFilter implements MatchSource {
 
         const fileUri = toFileUri(match);
         return changedSections.every(section => this.coverageProvider.isWellCovered(fileUri, section.startLine, section.endLine));
+    }
+
+    public async getAll(): Promise<MatchCollection> {
+        const filesWithCoveredMatches = await this.getQueuedFiles();
+        const matches = new MatchCollection();
+
+        for (const file of filesWithCoveredMatches) {
+            const matchUris = await this.getMatchUrisByFileUri(file);
+            matches.push(...matchUris);
+        }
+
+        return matches;
     }
 }

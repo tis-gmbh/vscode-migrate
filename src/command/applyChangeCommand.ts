@@ -46,7 +46,7 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
     }
 
     protected async writeChanges(matches: MatchCollection, progress: WindowProgress): Promise<void> {
-        progress.report({ message: "Saving File" });
+        progress.report({ message: "Applying changes" });
         await this.writeSameFileChanges(Object.values(matches).flat());
     }
 }
