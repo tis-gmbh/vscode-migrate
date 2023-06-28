@@ -24,19 +24,11 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote,
         @inject(TYPES.ApplyExecutionLock) applyLock: Lock
     ) {
-        super(window, matchManager, migrationHolder, applyLock);
+        super(window, matchManager, migrationHolder, applyLock, workspace);
     }
 
     public async execute(matchUri: Uri): Promise<void> {
         await this.tryApplyLocked([matchUri]);
-    }
-
-    protected async close(matches: NonEmptyArray<Uri>): Promise<void> {
-        const matchUri = matches[0];
-        const active = this.window.activeTextEditor;
-        if (active && stringify(active.document.uri) === stringify(matchUri)) {
-            await this.commands.executeCommand("workbench.action.closeActiveEditor");
-        }
     }
 
     protected getProgressTitle(matches: NonEmptyArray<Uri>): string {

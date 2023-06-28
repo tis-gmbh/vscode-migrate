@@ -31,20 +31,12 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         @inject(TYPES.MatchCoverageFilter) protected readonly matchCoverageFilter: MatchCoverageFilter,
         @inject(TYPES.ApplyExecutionLock) applyLock: Lock,
     ) {
-        super(window, matchManager, migrationHolder, applyLock);
+        super(window, matchManager, migrationHolder, applyLock, workspace);
     }
 
     public async execute(): Promise<void> {
         const matches = await this.getWellCoveredMatches();
         await this.tryApplyLocked(matches);
-    }
-
-    protected async save(_matches: NonEmptyArray<Uri>): Promise<void> {
-        await this.workspace.saveAll(false);
-    }
-
-    protected async close(_matches: NonEmptyArray<Uri>): Promise<void> {
-        // API does not support closing editors that are not the active editor
     }
 
     private async getWellCoveredMatches(): Promise<NonEmptyArray<Uri>> {

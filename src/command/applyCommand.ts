@@ -1,10 +1,11 @@
 import { inject, injectable } from "inversify";
-import { Progress, ProgressLocation, Uri } from "vscode";
-import { TYPES, VSC_TYPES, VscWindow } from "../di/types";
+import { Progress, ProgressLocation, TabGroup, TabInputText, TabInputTextDiff, Uri } from "vscode";
+import { TYPES, VSC_TYPES, VscWindow, VscWorkspace } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { NonEmptyArray } from "../utilTypes";
 import { Lock } from "../utils/lock";
+import { stringify } from "../utils/uri";
 
 @injectable()
 export abstract class ApplyCommand {
@@ -12,7 +13,8 @@ export abstract class ApplyCommand {
         @inject(VSC_TYPES.VscWindow) protected readonly window: VscWindow,
         @inject(TYPES.MatchManager) protected readonly matchManager: MatchManager,
         @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote,
-        @inject(TYPES.ApplyExecutionLock) private readonly applyLock: Lock
+        @inject(TYPES.ApplyExecutionLock) private readonly applyLock: Lock,
+        @inject(VSC_TYPES.VscWorkspace) protected readonly workspace: VscWorkspace,
     ) { }
 
     protected handleApplyError(error: any): void {
@@ -45,9 +47,32 @@ export abstract class ApplyCommand {
         await this.checkMigrationDone();
     }
 
-    protected abstract save(matches: NonEmptyArray<Uri>): Promise<void>;
+    protected async save(_matches: NonEmptyArray<Uri>): Promise<void> {
+        await this.workspace.saveAll(false);
+    }
 
-    protected abstract close(_matches: NonEmptyArray<Uri>): Promise<void>;
+    protected async close(matches: NonEmptyArray<Uri>): Promise<void> {
+        const matchUrisAsString = matches.map(stringify);
+        const tabGroups: readonly TabGroup[] = this.window.tabGroups?.all || [];
+
+        for (const tabGroup of tabGroups) {
+            for (const tab of tabGroup.tabs) {
+                let uri: Uri;
+
+                if (tab.input instanceof TabInputTextDiff) {
+                    uri = tab.input.modified;
+                } else if (tab.input instanceof TabInputText) {
+                    uri = tab.input.uri;
+                } else {
+                    continue;
+                }
+
+                if (matchUrisAsString.includes(stringify(uri))) {
+                    await this.window.tabGroups?.close(tab);
+                }
+            }
+        }
+    }
 
     protected applyWithProgress(matches: NonEmptyArray<Uri>): Thenable<void> {
         return this.window.withProgress({
