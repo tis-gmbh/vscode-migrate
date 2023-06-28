@@ -1,5 +1,5 @@
 import { inject, injectable } from "inversify";
-import { Progress, ProgressLocation, Uri } from "vscode";
+import { Progress, Uri } from "vscode";
 import { TYPES, VSC_TYPES, VscCommands, VscWindow, VscWorkspace } from "../di/types";
 import { MergeService } from "../mergeService";
 import { MatchManager } from "../migration/matchManger";
@@ -40,7 +40,7 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
     }
 
     protected async save(_matches: NonEmptyArray<Uri>): Promise<void> {
-        await this.workspace.saveAll();
+        await this.workspace.saveAll(false);
     }
 
     protected async close(_matches: NonEmptyArray<Uri>): Promise<void> {
@@ -59,14 +59,11 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         throw new Error("No well covered matches found");
     }
 
-    protected applyChangesWithProgress(matches: NonEmptyArray<Uri>): Thenable<void> {
-        return this.window.withProgress({
-            title: `Applying Well Covered Changes`,
-            location: ProgressLocation.Notification
-        }, progress => this.applyMatches(matches, progress));
+    protected getProgressTitle(_matches: NonEmptyArray<Uri>): string {
+        return `Applying Well Covered Changes`;
     }
 
-    private async applyMatches(matches: Uri[], progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+    protected async applyMatches(matches: Uri[], progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         await this.workspace.saveAll();
 
         const files = new Set(matches.map((match) => stringify(toFileUri(match))));

@@ -1,5 +1,5 @@
 import { inject, injectable } from "inversify";
-import { FileSystemProvider, Progress, ProgressLocation, Uri } from "vscode";
+import { FileSystemProvider, Progress, Uri } from "vscode";
 import { TYPES, VSC_TYPES, VscCommands, VscWindow, VscWorkspace } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
@@ -39,17 +39,14 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         }
     }
 
-    protected applyChangesWithProgress(matches: NonEmptyArray<Uri>): Thenable<void> {
+    protected getProgressTitle(matches: NonEmptyArray<Uri>): string {
         const matchUri = matches[0];
         const match = this.matchManager.byMatchUriOrThrow(matchUri);
-
-        return this.window.withProgress({
-            title: `Applying Change ${match.match.label}`,
-            location: ProgressLocation.Notification
-        }, progress => this.applyChangesForMatch(matchUri, progress));
+        return `Applying Change ${match.match.label}`;
     }
 
-    private async applyChangesForMatch(matchUri: Uri, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+    protected async applyMatches(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+        const matchUri = matches[0];
         const fileUri = toFileUri(matchUri);
         progress.report({ message: "Saving File" });
         const newContent = await this.changedContentProvider.readFile(matchUri);
