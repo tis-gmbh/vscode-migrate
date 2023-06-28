@@ -13,6 +13,8 @@ export type WindowProgress = Progress<{
     increment?: number | undefined;
 }>;
 
+export type MatchesByFile = Record<string, NonEmptyArray<Uri>>;
+
 @injectable()
 export abstract class ApplyCommand {
     public constructor(
@@ -35,7 +37,7 @@ export abstract class ApplyCommand {
         throw new Error(message);
     }
 
-    protected async tryApplyLocked(matches: NonEmptyArray<Uri>): Promise<void> {
+    protected async tryApplyLocked(matches: MatchesByFile): Promise<void> {
         try {
             await this.applyLocked(matches);
         } catch (error) {
@@ -43,23 +45,24 @@ export abstract class ApplyCommand {
         }
     }
 
-    private applyLocked(matches: NonEmptyArray<Uri>): Promise<void> {
+    private applyLocked(matches: MatchesByFile): Promise<void> {
         return this.applyLock.lockWhile(() => this.apply(matches));
     }
 
-    protected async apply(matches: NonEmptyArray<Uri>): Promise<void> {
-        await this.save(matches);
+    protected async apply(matches: MatchesByFile): Promise<void> {
+        await this.save();
         await this.close(matches);
         await this.applyWithProgress(matches);
         await this.checkMigrationDone();
     }
 
-    protected async save(_matches: NonEmptyArray<Uri>): Promise<void> {
+    protected async save(): Promise<void> {
         await this.workspace.saveAll(false);
     }
 
-    protected async close(matches: NonEmptyArray<Uri>): Promise<void> {
-        const matchUrisAsString = matches.map(stringify);
+    protected async close(matches: MatchesByFile): Promise<void> {
+        const allMatches = Object.values(matches).flat();
+        const matchUrisAsString = allMatches.map(stringify);
         const tabGroups: readonly TabGroup[] = this.window.tabGroups?.all || [];
 
         for (const tabGroup of tabGroups) {
@@ -81,26 +84,31 @@ export abstract class ApplyCommand {
         }
     }
 
-    protected applyWithProgress(matches: NonEmptyArray<Uri>): Thenable<void> {
+    protected applyWithProgress(matches: MatchesByFile): Thenable<void> {
         return this.window.withProgress({
             title: this.getProgressTitle(matches),
             location: ProgressLocation.Notification
         }, progress => this.applyMatches(matches, progress));
     }
 
-    protected abstract getProgressTitle(matches: NonEmptyArray<Uri>): string;
+    protected abstract getProgressTitle(matches: MatchesByFile): string;
 
-    protected async applyMatches(matches: NonEmptyArray<Uri>, progress: WindowProgress): Promise<void> {
+    protected async applyMatches(matches: MatchesByFile, progress: WindowProgress): Promise<void> {
         await this.writeChanges(matches, progress);
         await this.tryRunVerify(progress);
         await this.commitToVcs(matches, progress);
-        this.matchManager.resolveEntries(matches);
+        this.resolveMatches(matches);
     }
 
-    protected abstract writeChanges(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void>;
+    private resolveMatches(matches: MatchesByFile): void {
+        const allMatches = Object.values(matches).flat();
+        this.matchManager.resolveEntries(allMatches);
+    }
+
+    protected abstract writeChanges(matches: MatchesByFile, progress: WindowProgress): Promise<void>;
 
 
-    protected abstract commitToVcs(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void>;
+    protected abstract commitToVcs(matches: MatchesByFile, progress: WindowProgress): Promise<void>;
 
 
     protected async checkMigrationDone(): Promise<void> {
@@ -109,7 +117,7 @@ export abstract class ApplyCommand {
         }
     }
 
-    protected async tryRunVerify(progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+    protected async tryRunVerify(progress: WindowProgress): Promise<void> {
         try {
             progress.report({ message: "Running verification tasks" });
             await this.runVerify();
@@ -122,9 +130,11 @@ export abstract class ApplyCommand {
         await this.migrationHolder.verify();
     }
 
-    protected async writeSameFileChanges(matches: NonEmptyArray<Uri>): Promise<void> {
+    protected async writeSameFileChanges(matches: Uri[]): Promise<void> {
+        if (!matches[0]) return;
         const fileUri = toFileUri(matches[0]);
-        const newContent = await this.changedContentProvider.getMergeResult(...matches);
+        const newContent = await this.changedContentProvider
+            .getMergeResult(...matches as NonEmptyArray<Uri>);
 
         const newBuffer = Buffer.from(newContent);
         await this.workspace.fs.writeFile(fileUri, newBuffer);

@@ -1,5 +1,4 @@
 import { inject, injectable } from "inversify";
-import { Uri } from "vscode";
 import { TYPES, VSC_TYPES, VscCommands, VscWindow, VscWorkspace } from "../di/types";
 import { MergeService } from "../mergeService";
 import { MatchManager } from "../migration/matchManger";
@@ -7,11 +6,11 @@ import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { CoverageProvider } from "../providers/coverageProvider";
 import { MatchCoverageFilter } from "../providers/matchCoverageFilter";
 import { MatchFileSystemProvider } from "../providers/matchFileSystemProvider";
-import { NonEmptyArray, isNotEmptyArray } from "../utilTypes";
+import { isNonEmptyArray } from "../utilTypes";
 import { Lock } from "../utils/lock";
-import { stringify, toFileUri } from "../utils/uri";
+import { stringify } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
-import { ApplyCommand, WindowProgress } from "./applyCommand";
+import { ApplyCommand, MatchesByFile, WindowProgress } from "./applyCommand";
 import { Command } from "./command";
 
 @injectable()
@@ -39,42 +38,33 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         await this.tryApplyLocked(matches);
     }
 
-    private async getWellCoveredMatches(): Promise<NonEmptyArray<Uri>> {
+    private async getWellCoveredMatches(): Promise<MatchesByFile> {
         const filesWithCoveredMatches = await this.matchCoverageFilter.getQueuedFiles();
-        const matchUrisGroupedByFile = await Promise.all(filesWithCoveredMatches.map((file) => this.matchCoverageFilter.getMatchUrisByFileUri(file)));
-        const matches = matchUrisGroupedByFile.flat();
 
-        if (isNotEmptyArray(matches)) {
-            return matches;
+        const matchUrisByFile: MatchesByFile = {};
+        for (const file of filesWithCoveredMatches) {
+            const matchUris = await this.matchCoverageFilter.getMatchUrisByFileUri(file);
+
+            if (isNonEmptyArray(matchUris)) {
+                matchUrisByFile[stringify(file)] = matchUris;
+            }
         }
 
-        throw new Error("No well covered matches found");
+        return matchUrisByFile;
     }
 
-    protected getProgressTitle(matches: NonEmptyArray<Uri>): string {
+    protected getProgressTitle(matches: MatchesByFile): string {
         return `Applying ${matches.length} Well Covered Changes`;
     }
 
-    protected async commitToVcs(matches: Uri[]): Promise<void> {
+    protected async commitToVcs(matches: MatchesByFile): Promise<void> {
         await this.versionControl.stageAll();
-        await this.versionControl.commit(`Batch application of ${matches.length} well covered matches for migration 'Brackets'`);
+        await this.versionControl.commit(`Batch application of ${Object.values(matches).flat().length} well covered matches for migration 'Brackets'`);
     }
 
-    protected async writeChanges(matches: Uri[], _progress: WindowProgress): Promise<void> {
-        const matchesByFile = matches.reduce((acc, match) => {
-            const file = stringify(toFileUri(match));
-            let matches = acc.get(file);
-            if (!matches) {
-                matches = [match];
-                acc.set(file, matches);
-            } else {
-                matches.push(match);
-            }
-            return acc;
-        }, new Map<string, NonEmptyArray<Uri>>());
-
-        for (const matches of matchesByFile.values()) {
-            await this.writeSameFileChanges(matches);
+    protected async writeChanges(matches: MatchesByFile, _progress: WindowProgress): Promise<void> {
+        for (const sameFileMatches of Object.values(matches)) {
+            await this.writeSameFileChanges(sameFileMatches);
         }
     }
 }
