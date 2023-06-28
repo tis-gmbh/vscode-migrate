@@ -1,5 +1,5 @@
 import { inject, injectable } from "inversify";
-import { Progress, Uri } from "vscode";
+import { Uri } from "vscode";
 import { TYPES, VSC_TYPES, VscCommands, VscWindow, VscWorkspace } from "../di/types";
 import { MergeService } from "../mergeService";
 import { MatchManager } from "../migration/matchManger";
@@ -11,7 +11,7 @@ import { NonEmptyArray, isNotEmptyArray } from "../utilTypes";
 import { Lock } from "../utils/lock";
 import { parse, stringify, toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
-import { ApplyCommand } from "./applyCommand";
+import { ApplyCommand, WindowProgress } from "./applyCommand";
 import { Command } from "./command";
 
 @injectable()
@@ -60,7 +60,7 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         await this.versionControl.commit(`Batch application of ${matches.length} well covered matches for migration 'Brackets'`);
     }
 
-    protected async applyChanges(matches: Uri[], _progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+    protected async applyChanges(matches: Uri[], _progress: WindowProgress): Promise<void> {
         const files = new Set(matches.map((match) => stringify(toFileUri(match))));
         for (const file of files) {
             await this.applyMatchesInFile(parse(file));

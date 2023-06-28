@@ -7,7 +7,7 @@ import { NonEmptyArray } from "../utilTypes";
 import { Lock } from "../utils/lock";
 import { toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
-import { ApplyCommand } from "./applyCommand";
+import { ApplyCommand, WindowProgress } from "./applyCommand";
 import { Command } from "./command";
 
 @injectable()
@@ -37,13 +37,13 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         return `Applying Change ${match.match.label}`;
     }
 
-    protected async commitToVcs(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+    protected async commitToVcs(matches: NonEmptyArray<Uri>, progress: WindowProgress): Promise<void> {
         const matchUri = matches[0];
         progress.report({ message: "Committing file" });
         await this.versionControl.stageAndCommit(matchUri);
     }
 
-    protected async applyChanges(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+    protected async applyChanges(matches: NonEmptyArray<Uri>, progress: WindowProgress): Promise<void> {
         const matchUri = matches[0];
         const fileUri = toFileUri(matchUri);
         progress.report({ message: "Saving File" });

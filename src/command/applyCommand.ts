@@ -7,6 +7,11 @@ import { NonEmptyArray } from "../utilTypes";
 import { Lock } from "../utils/lock";
 import { stringify } from "../utils/uri";
 
+export type WindowProgress = Progress<{
+    message?: string | undefined;
+    increment?: number | undefined;
+}>;
+
 @injectable()
 export abstract class ApplyCommand {
     public constructor(
@@ -83,7 +88,7 @@ export abstract class ApplyCommand {
 
     protected abstract getProgressTitle(matches: NonEmptyArray<Uri>): string;
 
-    protected async applyMatches(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+    protected async applyMatches(matches: NonEmptyArray<Uri>, progress: WindowProgress): Promise<void> {
         await this.applyChanges(matches, progress);
         await this.tryRunVerify(progress);
         await this.commitToVcs(matches, progress);
