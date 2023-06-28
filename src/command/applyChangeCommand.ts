@@ -5,7 +5,7 @@ import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { NonEmptyArray } from "../utilTypes";
 import { Lock } from "../utils/lock";
-import { stringify, toFileUri } from "../utils/uri";
+import { toFileUri } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
 import { ApplyCommand } from "./applyCommand";
 import { Command } from "./command";
@@ -44,23 +44,11 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         const newContent = await this.changedContentProvider.readFile(matchUri);
         await this.workspace.fs.writeFile(fileUri, newContent);
 
-        this.matchManager.resolveEntry(matchUri);
-
         await this.tryRunVerify(progress);
 
         progress.report({ message: "Committing file" });
         await this.versionControl.stageAndCommit(matchUri);
-    }
 
-    protected async save(matches: NonEmptyArray<Uri>): Promise<void> {
-        const matchUri = matches[0];
-        const stringifiedUri = stringify(matchUri);
-        const modifiedDocument = this.workspace.textDocuments.find(
-            candidate => stringify(candidate.uri) === stringifiedUri
-        );
-
-        if (modifiedDocument && modifiedDocument.isDirty) {
-            await modifiedDocument.save();
-        }
+        this.matchManager.resolveEntry(matchUri);
     }
 }

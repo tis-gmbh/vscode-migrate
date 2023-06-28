@@ -56,8 +56,6 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
     }
 
     protected async applyMatches(matches: Uri[], progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
-        await this.workspace.saveAll();
-
         const files = new Set(matches.map((match) => stringify(toFileUri(match))));
         for (const file of files) {
             await this.applyMatchesInFile(parse(file));

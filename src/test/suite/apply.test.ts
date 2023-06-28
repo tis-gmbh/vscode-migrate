@@ -7,7 +7,7 @@ import { applyAllFor, applyChangesFor, applyWellCoveredMatches, commits } from "
 import { modifyContent } from "../utils/editor";
 import { actual, actualUri, expected } from "../utils/fs";
 import { message, progress, progressRecords } from "../utils/gui";
-import { getFirstMatch, getNthMatchUriOf, wellCoveredMatchesReady } from "../utils/tree";
+import { getAllMatchesTree, getFirstMatch, getNthMatchUriOf, wellCoveredMatchesReady } from "../utils/tree";
 import { setModified, setUntracked } from "../utils/vcs";
 
 suite("Change Application", () => {
@@ -151,5 +151,17 @@ suite("Change Application", () => {
             message: "Failed to apply. Reason: Previous execution is still running.",
             level: "error"
         })).to.eventually.exist;
+    });
+
+    test("does not resolve change if verification fails", async () => {
+        await scenario.load("singleFile", "Brackets - Fail Verify");
+
+        const firstMatch = getFirstMatch()!;
+        await applyChangesFor(firstMatch);
+
+        const matchesTree = await getAllMatchesTree() as Record<string, string[]>;
+        const firstFileMatches = matchesTree["main.ts"];
+
+        expect(firstFileMatches).to.include(">>>First match<<<");
     });
 });

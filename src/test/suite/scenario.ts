@@ -31,6 +31,7 @@ type MigrationName = "Brackets"
     | "Brackets - Custom Commit Message"
     | "Brackets - Whole File As Single Change"
     | "Brackets - Never Resolve Verify"
+    | "Brackets - Fail Verify"
     | "Lazy Suicidal"
     | "Suicidal";
 
