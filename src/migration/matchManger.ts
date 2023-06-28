@@ -87,7 +87,7 @@ export class MatchManager {
             .map(([matchIndex],) => toMatchUri(fileUri, matchIndex));
     }
 
-    public getMatchesByFileUri(fileUri: Uri): Match[] {
+    public getMatchCollectionUri(fileUri: Uri): Match[] {
         const path = this.getKeyByFileUri(fileUri);
         return (this.matches[path] || [])
             .filter(matchEntry => matchEntry.state === "queued")

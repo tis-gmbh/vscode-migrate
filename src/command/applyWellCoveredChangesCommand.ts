@@ -6,11 +6,10 @@ import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { CoverageProvider } from "../providers/coverageProvider";
 import { MatchCoverageFilter } from "../providers/matchCoverageFilter";
 import { MatchFileSystemProvider } from "../providers/matchFileSystemProvider";
-import { isNonEmptyArray } from "../utilTypes";
+import { MatchCollection } from "../test/utils/matchCollection";
 import { Lock } from "../utils/lock";
-import { stringify } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
-import { ApplyCommand, MatchesByFile, WindowProgress } from "./applyCommand";
+import { ApplyCommand, WindowProgress } from "./applyCommand";
 import { Command } from "./command";
 
 @injectable()
@@ -38,33 +37,31 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         await this.tryApplyLocked(matches);
     }
 
-    private async getWellCoveredMatches(): Promise<MatchesByFile> {
+    private async getWellCoveredMatches(): Promise<MatchCollection> {
         const filesWithCoveredMatches = await this.matchCoverageFilter.getQueuedFiles();
+        const matches = new MatchCollection();
 
-        const matchUrisByFile: MatchesByFile = {};
         for (const file of filesWithCoveredMatches) {
-            const matchUris = await this.matchCoverageFilter.getMatchUrisByFileUri(file);
-
-            if (isNonEmptyArray(matchUris)) {
-                matchUrisByFile[stringify(file)] = matchUris;
-            }
+            const matchUris = await this.matchCoverageFilter
+                .getMatchUrisByFileUri(file);
+            matches.push(...matchUris);
         }
 
-        return matchUrisByFile;
+        return matches;
     }
 
-    protected getProgressTitle(matches: MatchesByFile): string {
+    protected getProgressTitle(matches: MatchCollection): string {
         return `Applying ${matches.length} Well Covered Changes`;
     }
 
-    protected async commitToVcs(matches: MatchesByFile): Promise<void> {
+    protected async commitToVcs(matches: MatchCollection): Promise<void> {
         await this.versionControl.stageAll();
         await this.versionControl.commit(`Batch application of ${Object.values(matches).flat().length} well covered matches for migration 'Brackets'`);
     }
 
-    protected async writeChanges(matches: MatchesByFile, _progress: WindowProgress): Promise<void> {
-        for (const sameFileMatches of Object.values(matches)) {
-            await this.writeSameFileChanges(sameFileMatches);
+    protected async writeChanges(matches: MatchCollection, _progress: WindowProgress): Promise<void> {
+        for (const file of matches.files()) {
+            await this.writeSameFileChanges(matches.ofFile(file));
         }
     }
 }

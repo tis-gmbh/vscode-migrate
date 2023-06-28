@@ -4,6 +4,7 @@ import { TYPES, VSC_TYPES, VscWindow, VscWorkspace } from "../di/types";
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { MatchFileSystemProvider } from "../providers/matchFileSystemProvider";
+import { MatchCollection } from "../test/utils/matchCollection";
 import { NonEmptyArray } from "../utilTypes";
 import { Lock } from "../utils/lock";
 import { stringify, toFileUri } from "../utils/uri";
@@ -12,8 +13,6 @@ export type WindowProgress = Progress<{
     message?: string | undefined;
     increment?: number | undefined;
 }>;
-
-export type MatchesByFile = Record<string, NonEmptyArray<Uri>>;
 
 @injectable()
 export abstract class ApplyCommand {
@@ -37,7 +36,7 @@ export abstract class ApplyCommand {
         throw new Error(message);
     }
 
-    protected async tryApplyLocked(matches: MatchesByFile): Promise<void> {
+    protected async tryApplyLocked(matches: MatchCollection): Promise<void> {
         try {
             await this.applyLocked(matches);
         } catch (error) {
@@ -45,11 +44,11 @@ export abstract class ApplyCommand {
         }
     }
 
-    private applyLocked(matches: MatchesByFile): Promise<void> {
+    private applyLocked(matches: MatchCollection): Promise<void> {
         return this.applyLock.lockWhile(() => this.apply(matches));
     }
 
-    protected async apply(matches: MatchesByFile): Promise<void> {
+    protected async apply(matches: MatchCollection): Promise<void> {
         await this.save();
         await this.close(matches);
         await this.applyWithProgress(matches);
@@ -60,7 +59,7 @@ export abstract class ApplyCommand {
         await this.workspace.saveAll(false);
     }
 
-    protected async close(matches: MatchesByFile): Promise<void> {
+    protected async close(matches: MatchCollection): Promise<void> {
         const allMatches = Object.values(matches).flat();
         const matchUrisAsString = allMatches.map(stringify);
         const tabGroups: readonly TabGroup[] = this.window.tabGroups?.all || [];
@@ -84,31 +83,31 @@ export abstract class ApplyCommand {
         }
     }
 
-    protected applyWithProgress(matches: MatchesByFile): Thenable<void> {
+    protected applyWithProgress(matches: MatchCollection): Thenable<void> {
         return this.window.withProgress({
             title: this.getProgressTitle(matches),
             location: ProgressLocation.Notification
         }, progress => this.applyMatches(matches, progress));
     }
 
-    protected abstract getProgressTitle(matches: MatchesByFile): string;
+    protected abstract getProgressTitle(matches: MatchCollection): string;
 
-    protected async applyMatches(matches: MatchesByFile, progress: WindowProgress): Promise<void> {
+    protected async applyMatches(matches: MatchCollection, progress: WindowProgress): Promise<void> {
         await this.writeChanges(matches, progress);
         await this.tryRunVerify(progress);
         await this.commitToVcs(matches, progress);
         this.resolveMatches(matches);
     }
 
-    private resolveMatches(matches: MatchesByFile): void {
+    private resolveMatches(matches: MatchCollection): void {
         const allMatches = Object.values(matches).flat();
         this.matchManager.resolveEntries(allMatches);
     }
 
-    protected abstract writeChanges(matches: MatchesByFile, progress: WindowProgress): Promise<void>;
+    protected abstract writeChanges(matches: MatchCollection, progress: WindowProgress): Promise<void>;
 
 
-    protected abstract commitToVcs(matches: MatchesByFile, progress: WindowProgress): Promise<void>;
+    protected abstract commitToVcs(matches: MatchCollection, progress: WindowProgress): Promise<void>;
 
 
     protected async checkMigrationDone(): Promise<void> {

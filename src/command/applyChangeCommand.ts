@@ -4,10 +4,10 @@ import { TYPES, VSC_TYPES, VscCommands, VscWindow, VscWorkspace } from "../di/ty
 import { MatchManager } from "../migration/matchManger";
 import { MigrationHolderRemote } from "../migration/migrationHolderRemote";
 import { MatchFileSystemProvider } from "../providers/matchFileSystemProvider";
+import { MatchCollection } from "../test/utils/matchCollection";
 import { Lock } from "../utils/lock";
-import { stringify } from "../utils/uri";
 import { VersionControl } from "../vcs/versionControl";
-import { ApplyCommand, MatchesByFile, WindowProgress } from "./applyCommand";
+import { ApplyCommand, WindowProgress } from "./applyCommand";
 import { Command } from "./command";
 
 @injectable()
@@ -28,24 +28,24 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
     }
 
     public async execute(matchUri: Uri): Promise<void> {
-        await this.tryApplyLocked({
-            [stringify(matchUri)]: [matchUri],
-        });
+        const collection = new MatchCollection();
+        collection.push(matchUri);
+        await this.tryApplyLocked(collection);
     }
 
-    protected getProgressTitle(matches: MatchesByFile): string {
-        const matchUri = Object.values(matches)[0]![0];
+    protected getProgressTitle(matches: MatchCollection): string {
+        const matchUri = matches[0]!;
         const match = this.matchManager.byMatchUriOrThrow(matchUri);
         return `Applying Change ${match.match.label}`;
     }
 
-    protected async commitToVcs(matches: MatchesByFile, progress: WindowProgress): Promise<void> {
-        const matchUri = Object.values(matches)[0]![0];
+    protected async commitToVcs(matches: MatchCollection, progress: WindowProgress): Promise<void> {
+        const matchUri = matches[0]!;
         progress.report({ message: "Committing file" });
         await this.versionControl.stageAndCommit(matchUri);
     }
 
-    protected async writeChanges(matches: MatchesByFile, progress: WindowProgress): Promise<void> {
+    protected async writeChanges(matches: MatchCollection, progress: WindowProgress): Promise<void> {
         progress.report({ message: "Saving File" });
         await this.writeSameFileChanges(Object.values(matches).flat());
     }
