@@ -37,18 +37,17 @@ export class ApplyChangeCommand extends ApplyCommand implements Command {
         return `Applying Change ${match.match.label}`;
     }
 
-    protected async applyMatches(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+    protected async commitToVcs(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+        const matchUri = matches[0];
+        progress.report({ message: "Committing file" });
+        await this.versionControl.stageAndCommit(matchUri);
+    }
+
+    protected async applyChanges(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         const matchUri = matches[0];
         const fileUri = toFileUri(matchUri);
         progress.report({ message: "Saving File" });
         const newContent = await this.changedContentProvider.readFile(matchUri);
         await this.workspace.fs.writeFile(fileUri, newContent);
-
-        await this.tryRunVerify(progress);
-
-        progress.report({ message: "Committing file" });
-        await this.versionControl.stageAndCommit(matchUri);
-
-        this.matchManager.resolveEntry(matchUri);
     }
 }

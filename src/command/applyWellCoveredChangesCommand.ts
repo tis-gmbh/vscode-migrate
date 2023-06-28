@@ -55,25 +55,23 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         return `Applying ${matches.length} Well Covered Changes`;
     }
 
-    protected async applyMatches(matches: Uri[], progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+    protected async commitToVcs(matches: Uri[]): Promise<void> {
+        await this.versionControl.stageAll();
+        await this.versionControl.commit(`Batch application of ${matches.length} well covered matches for migration 'Brackets'`);
+    }
+
+    protected async applyChanges(matches: Uri[], _progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
         const files = new Set(matches.map((match) => stringify(toFileUri(match))));
         for (const file of files) {
             await this.applyMatchesInFile(parse(file));
         }
-
-        await this.tryRunVerify(progress);
-
-        await this.versionControl.stageAll();
-        await this.versionControl.commit(`Batch application of ${matches.length} well covered matches for migration 'Brackets'`);
-        this.matchManager.resolveEntries(matches);
     }
 
-    private async applyMatchesInFile(fileUri: Uri): Promise<Uri[]> {
+    protected async applyMatchesInFile(fileUri: Uri): Promise<void> {
         const matches = await this.matchCoverageFilter.getMatchUrisByFileUri(fileUri) as NonEmptyArray<Uri>;
         const newContent = await this.changedContentProvider.getMergeResult(...matches);
 
         const newBuffer = Buffer.from(newContent);
         await this.workspace.fs.writeFile(fileUri, newBuffer);
-        return matches;
     }
 }

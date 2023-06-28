@@ -83,7 +83,18 @@ export abstract class ApplyCommand {
 
     protected abstract getProgressTitle(matches: NonEmptyArray<Uri>): string;
 
-    protected abstract applyMatches(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void>;
+    protected async applyMatches(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
+        await this.applyChanges(matches, progress);
+        await this.tryRunVerify(progress);
+        await this.commitToVcs(matches, progress);
+        this.matchManager.resolveEntries(matches);
+    }
+
+    protected abstract applyChanges(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void>;
+
+
+    protected abstract commitToVcs(matches: NonEmptyArray<Uri>, progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void>;
+
 
     protected async checkMigrationDone(): Promise<void> {
         if (this.matchManager.allResolved) {
