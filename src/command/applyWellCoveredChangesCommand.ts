@@ -59,8 +59,8 @@ export class ApplyWellCoveredChangesCommand extends ApplyCommand implements Comm
         throw new Error("No well covered matches found");
     }
 
-    protected getProgressTitle(_matches: NonEmptyArray<Uri>): string {
-        return `Applying Well Covered Changes`;
+    protected getProgressTitle(matches: NonEmptyArray<Uri>): string {
+        return `Applying ${matches.length} Well Covered Changes`;
     }
 
     protected async applyMatches(matches: Uri[], progress: Progress<{ message?: string | undefined; increment?: number | undefined; }>): Promise<void> {
