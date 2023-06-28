@@ -2,6 +2,7 @@ import { injectable } from "inversify";
 import { basename } from "path";
 import { Event, ThemeIcon, TreeDataProvider, TreeItem, TreeItemCollapsibleState, Uri } from "vscode";
 import { MatchEntry } from "../migration/matchManger";
+import { MatchCollection } from "../test/utils/matchCollection";
 import { parse, stringify, toFileUri } from "../utils/uri";
 
 function isMatchUri(uri: string): boolean {

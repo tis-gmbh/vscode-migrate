@@ -22,7 +22,7 @@ export abstract class ApplyCommand {
         @inject(TYPES.MigrationHolderRemote) protected readonly migrationHolder: MigrationHolderRemote,
         @inject(TYPES.ApplyExecutionLock) private readonly applyLock: Lock,
         @inject(VSC_TYPES.VscWorkspace) protected readonly workspace: VscWorkspace,
-        @inject(TYPES.MatchFileSystemProvider) protected readonly changedContentProvider: MatchFileSystemProvider,
+        @inject(TYPES.MatchFileSystemProvider) protected readonly changedContentProvider: MatchFileSystemProvider
     ) { }
 
     protected handleApplyError(error: any): void {

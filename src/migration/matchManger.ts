@@ -3,6 +3,7 @@ import { } from "querystring";
 import { EventEmitter, Uri } from "vscode";
 import { TYPES, VSC_TYPES, VscWorkspace } from "../di/types";
 import { Match, MatchedFile } from "../migrationTypes";
+import { MatchCollection } from "../test/utils/matchCollection";
 import { fsPathToFileUri, getMatchId, parse, stringify, toFileUri, toMatchUri } from "../utils/uri";
 import { MigrationHolderRemote } from "./migrationHolderRemote";
 

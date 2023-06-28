@@ -1,4 +1,5 @@
 import { Uri } from "vscode";
+import { MatchSource } from "../../providers/matchTreeProvider";
 import { stringify } from "../../utils/uri";
 
 export class MatchCollection extends Array<Uri> {
@@ -24,5 +25,17 @@ export class MatchCollection extends Array<Uri> {
                 [stringifiedMatch]: [...fileMatches, match],
             };
         }, {} as Record<string, Uri[]>);
+    }
+
+    public static async fromMatchSource(matchSource: MatchSource): Promise<MatchCollection> {
+        const filesWithCoveredMatches = await matchSource.getQueuedFiles();
+        const matches = new MatchCollection();
+
+        for (const file of filesWithCoveredMatches) {
+            const matchUris = await matchSource.getMatchUrisByFileUri(file);
+            matches.push(...matchUris);
+        }
+
+        return matches;
     }
 }
